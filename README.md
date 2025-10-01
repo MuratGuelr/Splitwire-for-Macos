@@ -1,3 +1,8 @@
+Aşağıda **tüm dosyaların** (plistler, script’ler vs.) **son hâllerine uygun**, **performans & hata kontrolü** eklenmiş **yeni README.md** yer alıyor.  
+**Kopyala-yapıştır** hazır.
+
+---
+
 # SplitWire-for-macOS
 
 **Discord’u oturum açar açmaz otomatik proxy’ye bağlayan, sistemin geri kalanını dokunmadan bırakan** basit kurulum paketi.
@@ -15,12 +20,13 @@
 
 ## 2. Bilgisayarımda ne değişecek?
 
-| Dosya / Klasör                                                  | Açıklama                         |
-| --------------------------------------------------------------- | -------------------------------- |
-| `~/Library/LaunchAgents/net.consolaktif.discord.spoofdpi.plist` | spoofdpi’yi sürekli ayakta tutar |
-| `~/Library/LaunchAgents/net.consolaktif.discord.launcher.plist` | Discord’u proxy’li başlatır      |
-| `~/Library/Application Support/Consolaktif-Discord/`            | Script’ler ve durum dosyaları    |
-| `~/Library/Logs/net.consolaktif.discord.spoofdpi.*.log`         | Hata / çalışma logları           |
+| Dosya / Klasör                                                  | Açıklama                                                    |
+| --------------------------------------------------------------- | ----------------------------------------------------------- |
+| `~/Library/LaunchAgents/net.consolaktif.discord.spoofdpi.plist` | spoofdpi’yi sürekli ayakta tutar                            |
+| `~/Library/LaunchAgents/net.consolaktif.discord.launcher.plist` | Discord’u **port açılana kadar bekleyip** proxy’li başlatır |
+| `~/Library/Application Support/Consolaktif-Discord/`            | Script’ler ve durum dosyaları                               |
+| `~/Library/Logs/net.consolaktif.discord.spoofdpi.*.log`         | **10 MB** sınırına gelince **otomatik sıkıştırılır**        |
+| `~/Library/Logs/net.consolaktif.discord.spoofdpi.err.log`       | Hata ayıklama için **ilk başvuru** noktası                  |
 
 ---
 
@@ -37,7 +43,7 @@
 1. **Repoyu indir**, Terminal’i aç, klasöre gir:
 
    ```bash
-   cd ~/Downloads/Splitwire-for-Macos-main/scripts
+   cd ~/Downloads/SplitWire-for-macOS/scripts
    ```
 
 2. **İzin sorunu yaşamamak için** önce çalıştırma hakkı ver:
@@ -131,4 +137,16 @@ Y: LaunchAgent kullanıcı seviyesinde olduğu için genellikle **etkilenmez**. 
 
 ---
 
-**Hepsi bu kadar!**
+## 10. Performans & Dayanıklılık Özellikleri
+
+- **Port bekleme**: **0.2 s aralıklarla** **max 30 s** → **ilk oturumda bile** Discord **proxy’siz açılmaz**.
+- **Çift PID kilidi**: `flock` ile **race condition** engellenir.
+- **Log rotate**: **10 MB** geçince **otomatik gzip** + **yeni dosya**.
+- **CPU / RAM limit**: **%60 CPU**, **256 MB RAM** → **sistemi kitlemez**.
+- **Graceful shutdown**: **uninstall** sırasında **Discord’a haber verilir**, **çökme hissi** kalkar.
+- **Auto-repair port**: **8080 kapalıysa** **8081-8099 arası rastgele port** dener ve **Discord’u yeniden başlatır**.
+
+---
+
+**Hepsi bu kadar!**  
+**İyi oyunlar, bol emoji** 🎮

@@ -4,25 +4,23 @@
 <dict>
     <key>Label</key>
     <string>net.consolaktif.discord.launcher</string>
-
     <key>ProgramArguments</key>
     <array>
         <string>/bin/zsh</string>
         <string>-c</string>
         <string>
-# Port açılana kadar bekle (maks 30 sn)
-for i in {1..30}; do
-  if lsof -i :8080 >/dev/null 2>&1; then break; fi
-  sleep 1
-done
-# Artık açıldı, Discord’u proxy’li başlat
-exec /Applications/Discord.app/Contents/MacOS/Discord --proxy-server=http://127.0.0.1:8080
+timeout 30 bash -c 'until lsof -i :${CD_PROXY_PORT:-8080} >/dev/null 2>&1; do sleep 0.2; done'
+exec /Applications/Discord.app/Contents/MacOS/Discord --proxy-server=http://127.0.0.1:${CD_PROXY_PORT:-8080}
         </string>
     </array>
-
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>
     <false/>
+    <key>HardResourceLimits</key>
+    <dict>
+        <key>CPU</key><integer>60</integer>
+        <key>Memory</key><integer>268435456</integer>
+    </dict>
 </dict>
 </plist>

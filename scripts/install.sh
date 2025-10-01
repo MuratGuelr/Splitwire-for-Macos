@@ -1,20 +1,37 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Renkler
+GRN=$(tput setaf 2) YLW=$(tput setaf 3) RED=$(tput setaf 1) RST=$(tput sgr0)
+checkmark() { echo "${GRN}✔${RST} $*"; }
+warning() { echo "${YLW}⚠${RST}  $*"; }
+error() { echo "${RED}✖${RST} $*"; }
+
+spinner() {
+  local pid=$1 msg=$2
+  echo -n "$msg  "
+  while kill -0 "$pid" 2>/dev/null; do
+    for s in / - \\ \|; do echo -ne "\b$s"; sleep 0.1; done
+  done
+  echo -e "\b✔"
+}
+
 # ---------- Homebrew yoksa kur ----------
 if ! command -v brew >/dev/null 2>&1; then
-  echo "Homebrew bulunamadı, kuruluyor…"
-  bash "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/install-homebrew.sh"
+  warning "Homebrew bulunamadı, kuruluyor…"
+  bash "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/install-homebrew.sh" &
+  spinner $! "Homebrew indiriliyor"
   eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null || /usr/local/bin/brew shellenv)"
 fi
-# ----------------------------------------
+checkmark "Homebrew hazır"
 
 # ---------- Discord kontrolü ----------
 if [[ ! -d "/Applications/Discord.app" ]]; then
-  echo "❌  Discord uygulaması /Applications klasöründe bulunamadı."
+  error "Discord uygulaması /Applications klasöründe bulunamadı."
   echo "   Lütfen Discord’u indirip /Applications klasörüne taşıyın ve tekrar çalıştırın."
   exit 1
 fi
+checkmark "Discord bulundu"
 # ----------------------------------------
 
 PLIST_SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/launchd"
@@ -31,21 +48,22 @@ STATE_DIR="$APP_SUPPORT_DIR/state"
 
 mkdir -p "$HOME/Library/LaunchAgents" "$APP_SUPPORT_DIR" "$STATE_DIR"
 
-# spoofdpi kontrol / kurulum
-if ! command -v spoofdpi >/dev/null 2>&1; then
-  set +e
-  brew list spoofdpi >/dev/null 2>&1 || brew install spoofdpi
-  BREW_RC=$?
-  set -e
-  if [[ $BREW_RC -eq 0 ]]; then
-    touch "$STATE_DIR/.installed_spoofdpi_via_brew"
-  else
-    echo "spoofdpi Homebrew ile otomatik kurulamadı. Lütfen elle kurun: brew install spoofdpi" >&2
-  fi
+# ---------- SwiftBar Otomatik Kurulum + Plugin ----------
+if ! command -v swiftbar >/dev/null 2>&1; then
+  warning "SwiftBar menü-bar kontrolü kuruluyor…"
+  brew install swiftbar &
+  spinner $! "SwiftBar indiriliyor"
 fi
+checkmark "SwiftBar hazır"
+
+PLUGIN_DIR="$HOME/Library/Application Support/SwiftBar/Plugins"
+mkdir -p "$PLUGIN_DIR"
+cp "$SCRIPT_SRC_DIR/../extra/swiftbar-consolaktif-discord.5m.sh" "$PLUGIN_DIR/"
+chmod +x "$PLUGIN_DIR/swiftbar-consolaktif-discord.5m.sh"
+checkmark "Menü-bar kumandası yüklendi (SwiftBar)"
+# ----------------------------------------------------------
 
 # ---------- beklemeli launcher plist OLUŞTUR ----------
-# (port açılana kadar bekle, sonra Discord'u proxy'li başlat)
 cat > "$PLIST_SRC_DIR/$LAUNCHER_PLIST_FILE" <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -58,19 +76,19 @@ cat > "$PLIST_SRC_DIR/$LAUNCHER_PLIST_FILE" <<'EOF'
         <string>/bin/zsh</string>
         <string>-c</string>
         <string>
-# Port açılana kadar bekle (maks 30 sn)
-for i in {1..30}; do
-  if lsof -i :8080 >/dev/null 2>&1; then break; fi
-  sleep 1
-done
-# Artık açıldı, Discord'u proxy'li başlat
-exec /Applications/Discord.app/Contents/MacOS/Discord --proxy-server=http://127.0.0.1:8080
+timeout 30 bash -c 'until lsof -i :${CD_PROXY_PORT:-8080} >/dev/null 2>&1; do sleep 0.2; done'
+exec /Applications/Discord.app/Contents/MacOS/Discord --proxy-server=http://127.0.0.1:${CD_PROXY_PORT:-8080}
         </string>
     </array>
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>
     <false/>
+    <key>HardResourceLimits</key>
+    <dict>
+        <key>CPU</key><integer>60</integer>
+        <key>Memory</key><integer>268435456</integer>
+    </dict>
 </dict>
 </plist>
 EOF
@@ -90,5 +108,20 @@ launchctl load -w "$TARGET_PLIST"
 launchctl unload "$TARGET_LAUNCHER_PLIST" 2>/dev/null || true
 launchctl load -w "$TARGET_LAUNCHER_PLIST"
 
-echo "Kurulum tamam. Loglar: $HOME/Library/Logs/net.consolaktif.discord.spoofdpi.*.log"
+echo ""
+checkmark "Kurulum tamam. Loglar: $HOME/Library/Logs/net.consolaktif.discord.spoofdpi.*.log"
 echo "Discord otomatik olarak proxy'yi kullanacak; diğer uygulamalar etkilenmeyecek."
+
+# ---------- Auto-Update kontrolü ----------
+REMOTE_VER=$(curl -s https://api.github.com/repos/MuratGuelr/SplitWire-for-macOS/releases/latest | jq -r .tag_name 2>/dev/null || echo "0")
+LOCAL_VER=$(cat "$STATE_DIR/.version" 2>/dev/null || echo "0")
+if [[ "$REMOTE_VER" != "0" && "$REMOTE_VER" != "$LOCAL_VER" ]]; then
+  warning "Yeni sürüm var: $REMOTE_VER"
+  echo "   Güncelleniyor…"
+  curl -L "https://github.com/MuratGuelr/SplitWire-for-macOS/archive/$REMOTE_VER.tar.gz" | tar -xz -C /tmp
+  (cd /tmp/SplitWire-for-macOS-"$REMOTE_VER" && ./scripts/install.sh)
+  echo "$REMOTE_VER" > "$STATE_DIR/.version"
+  checkmark "Güncelleme tamam! Çıkış yapılıyor."
+  exit 0
+fi
+# -------------------------------------------
