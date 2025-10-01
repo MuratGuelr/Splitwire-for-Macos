@@ -13,14 +13,14 @@ launchctl unload "$PLIST_FILE" 2>/dev/null || true
 launchctl stop net.consolaktif.discord.launcher 2>/dev/null || true
 launchctl unload "$LAUNCHER_PLIST_FILE" 2>/dev/null || true
 
-# ---------- Graceful Discord kill ----------
+# Graceful Discord kill
 pkill -x Discord || true
 sleep 1
 
-# ---------- Temel dosyaları sil ----------
+# Temel dosyaları sil
 rm -f "$PLIST_FILE" "$LAUNCHER_PLIST_FILE" "$SCRIPT_FILE"
 
-# ---------- Homebrew temizliği ----------
+# Homebrew temizliği
 if [[ -f "$STATE_DIR/.installed_spoofdpi_via_brew" ]] && command -v brew >/dev/null 2>&1; then
   brew list spoofdpi >/dev/null 2>&1 && brew uninstall spoofdpi || true
   rm -f "$STATE_DIR/.installed_spoofdpi_via_brew"
@@ -28,7 +28,7 @@ fi
 
 echo "Kaldırma tamam."
 
-# ---------- Kullanıcı onayı: Log + destek dosyaları ----------
+# Kullanıcı onayı: Log + destek dosyaları
 echo ""
 read -rp "Log ve destek dosyalarını da silmek ister misiniz? (yes/no): " SECIM
 case "$SECIM" in

@@ -48,21 +48,6 @@ STATE_DIR="$APP_SUPPORT_DIR/state"
 
 mkdir -p "$HOME/Library/LaunchAgents" "$APP_SUPPORT_DIR" "$STATE_DIR"
 
-# ---------- SwiftBar Otomatik Kurulum + Plugin ----------
-if ! command -v swiftbar >/dev/null 2>&1; then
-  warning "SwiftBar menü-bar kontrolü kuruluyor…"
-  brew install swiftbar &
-  spinner $! "SwiftBar indiriliyor"
-fi
-checkmark "SwiftBar hazır"
-
-PLUGIN_DIR="$HOME/Library/Application Support/SwiftBar/Plugins"
-mkdir -p "$PLUGIN_DIR"
-cp "$SCRIPT_SRC_DIR/../extra/swiftbar-consolaktif-discord.5m.sh" "$PLUGIN_DIR/"
-chmod +x "$PLUGIN_DIR/swiftbar-consolaktif-discord.5m.sh"
-checkmark "Menü-bar kumandası yüklendi (SwiftBar)"
-# ----------------------------------------------------------
-
 # ---------- beklemeli launcher plist OLUŞTUR ----------
 cat > "$PLIST_SRC_DIR/$LAUNCHER_PLIST_FILE" <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -111,17 +96,3 @@ launchctl load -w "$TARGET_LAUNCHER_PLIST"
 echo ""
 checkmark "Kurulum tamam. Loglar: $HOME/Library/Logs/net.consolaktif.discord.spoofdpi.*.log"
 echo "Discord otomatik olarak proxy'yi kullanacak; diğer uygulamalar etkilenmeyecek."
-
-# ---------- Auto-Update kontrolü ----------
-REMOTE_VER=$(curl -s https://api.github.com/repos/MuratGuelr/SplitWire-for-macOS/releases/latest | jq -r .tag_name 2>/dev/null || echo "0")
-LOCAL_VER=$(cat "$STATE_DIR/.version" 2>/dev/null || echo "0")
-if [[ "$REMOTE_VER" != "0" && "$REMOTE_VER" != "$LOCAL_VER" ]]; then
-  warning "Yeni sürüm var: $REMOTE_VER"
-  echo "   Güncelleniyor…"
-  curl -L "https://github.com/MuratGuelr/SplitWire-for-macOS/archive/$REMOTE_VER.tar.gz" | tar -xz -C /tmp
-  (cd /tmp/SplitWire-for-macOS-"$REMOTE_VER" && ./scripts/install.sh)
-  echo "$REMOTE_VER" > "$STATE_DIR/.version"
-  checkmark "Güncelleme tamam! Çıkış yapılıyor."
-  exit 0
-fi
-# -------------------------------------------

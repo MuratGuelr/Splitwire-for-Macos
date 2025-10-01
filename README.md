@@ -43,18 +43,8 @@ Aşağıda **tüm dosyaların** (plistler, script’ler vs.) **son hâllerine uy
 1. **Repoyu indir**, Terminal’i aç, klasöre gir:
 
    ```bash
-   cd ~/Downloads/SplitWire-for-Macos-1.0.0/scripts
-   ```
-
-2. **İzin sorunu yaşamamak için** önce çalıştırma hakkı ver:
-
-   ```bash
+   cd ~/Downloads/SplitWire-for-Macos-main/scripts
    chmod +x *.sh
-   ```
-
-3. Kurulumu başlat:
-
-   ```bash
    ./install.sh
    ```
 
@@ -62,7 +52,7 @@ Aşağıda **tüm dosyaların** (plistler, script’ler vs.) **son hâllerine uy
    - spoofdpi yoksa **otomatik yüklenir**.
    - Discord yoksa **“Discord bulunamadı”** uyarısı verip çıkar; yükleyip komutu tekrar çalıştırman yeterli.
 
-4. Discord’u aç (veya oturumu kapatıp aç; kendisi açılacak).  
+2. Discord’u aç (veya oturumu kapatıp aç; kendisi açılacak).  
    Artık **Discord trafiği spoofdpi üzerinden** gidiyor.
 
 ---
