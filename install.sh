@@ -76,12 +76,5 @@ while ! lsof -i :${CD_PROXY_PORT:-8080} &>/dev/null; do
     fi
 done
 checkmark "Proxy servisi aktif. Discord başlatılıyor..."
-launchctl start net.consolaktif.discord.launcher
 
-# --- YENİ: Başarılı kurulum sonrası kullanıcıyı bilgilendir ve terminali kapat ---
-SUCCESS_MESSAGE="SplitWire kurulumu başarıyla tamamlandı! Discord şimdi başlatılıyor."
-osascript -e "display dialog \"$SUCCESS_MESSAGE\" with title \"Kurulum Başarılı\" buttons {\"Tamam\"} default button \"Tamam\" with icon note"
-
-# AppleScript ile ön plandaki terminal penceresini kapat
-osascript -e 'tell application "Terminal" to close (first window whose frontmost is true)' &> /dev/null
-# --- BİTTİ ---
+nohup /Applications/Discord.app/Contents/MacOS/Discord --proxy-server="http://127.0.0.1:${CD_PROXY_PORT:-8080}" &>/dev/null &
