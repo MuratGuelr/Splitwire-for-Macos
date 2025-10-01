@@ -44,7 +44,39 @@ if ! command -v spoofdpi >/dev/null 2>&1; then
   fi
 fi
 
-# plist + script
+# ---------- beklemeli launcher plist OLUŞTUR ----------
+# (port açılana kadar bekle, sonra Discord'u proxy'li başlat)
+cat > "$PLIST_SRC_DIR/$LAUNCHER_PLIST_FILE" <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>net.consolaktif.discord.launcher</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/zsh</string>
+        <string>-c</string>
+        <string>
+# Port açılana kadar bekle (maks 30 sn)
+for i in {1..30}; do
+  if lsof -i :8080 >/dev/null 2>&1; then break; fi
+  sleep 1
+done
+# Artık açıldı, Discord'u proxy'li başlat
+exec /Applications/Discord.app/Contents/MacOS/Discord --proxy-server=http://127.0.0.1:8080
+        </string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <false/>
+</dict>
+</plist>
+EOF
+# ------------------------------------------------------
+
+# ana plist + script
 cp "$PLIST_SRC_DIR/$PLIST_FILE" "$TARGET_PLIST"
 cp "$SCRIPT_SRC_DIR/$SCRIPT_FILE" "$TARGET_SCRIPT"
 chmod +x "$TARGET_SCRIPT"

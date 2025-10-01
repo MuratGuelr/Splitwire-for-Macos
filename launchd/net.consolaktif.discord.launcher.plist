@@ -10,9 +10,13 @@
         <string>/bin/zsh</string>
         <string>-c</string>
         <string>
-sleep 3
-exec /Applications/Discord.app/Contents/MacOS/Discord \
-     --proxy-server=http://127.0.0.1:8080
+# Port açılana kadar bekle (maks 30 sn)
+for i in {1..30}; do
+  if lsof -i :8080 >/dev/null 2>&1; then break; fi
+  sleep 1
+done
+# Artık açıldı, Discord’u proxy’li başlat
+exec /Applications/Discord.app/Contents/MacOS/Discord --proxy-server=http://127.0.0.1:8080
         </string>
     </array>
 
