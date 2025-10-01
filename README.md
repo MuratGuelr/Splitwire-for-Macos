@@ -1,46 +1,42 @@
-Aşağıda **tüm dosyaların** (plistler, script’ler vs.) **son hâllerine uygun**, **performans & hata kontrolü** eklenmiş **yeni README.md** yer alıyor.  
-**Kopyala-yapıştır** hazır.
-
----
-
 # SplitWire-for-macOS
 
-**Discord’u oturum açar açmaz otomatik proxy’ye bağlayan, sistemin geri kalanını dokunmadan bırakan** basit kurulum paketi.
+**Discord’u macOS’te sadece kendi Proxy’si üzerinden çalıştıran, sistemin geri kalanını hiç etkilemeyen küçük bir araç.**
 
 ---
 
 ## 1. Ne yapar?
 
-- Sadece **Discord**’un trafiğini 127.0.0.1:8080’de çalışan **spoofdpi** programından geçirir.
-- Chrome, Safari, Zoom, oyunlar vs. eskisi gibi çalışmaya devam eder.
-- Mac’i açtığın anda her şey kendiliğinden hazırdır.
-- Tek komutla tamamen kaldırabilirsin, iz bırakmaz.
+- Sadece **Discord**’un bağlantılarını **spoofdpi proxy** (127.0.0.1:8080) üzerinden geçirir.
+- Safari, Chrome, Zoom, oyunlar ve tüm diğer uygulamalar aynı şekilde çalışmaya devam eder.
+- Mac açıldığında servisler otomatik devreye girer, Discord hazır bekler.
+- Tek komutla tamamen kaldırılabilir.
 
 ---
 
 ## 2. Bilgisayarımda ne değişecek?
 
-| Dosya / Klasör                                                  | Açıklama                                                    |
-| --------------------------------------------------------------- | ----------------------------------------------------------- |
-| `~/Library/LaunchAgents/net.consolaktif.discord.spoofdpi.plist` | spoofdpi’yi sürekli ayakta tutar                            |
-| `~/Library/LaunchAgents/net.consolaktif.discord.launcher.plist` | Discord’u **port açılana kadar bekleyip** proxy’li başlatır |
-| `~/Library/Application Support/Consolaktif-Discord/`            | Script’ler ve durum dosyaları                               |
-| `~/Library/Logs/net.consolaktif.discord.spoofdpi.*.log`         | **10 MB** sınırına gelince **otomatik sıkıştırılır**        |
-| `~/Library/Logs/net.consolaktif.discord.spoofdpi.err.log`       | Hata ayıklama için **ilk başvuru** noktası                  |
+| Dosya / Klasör                                                  | Açıklama                                                      |
+| --------------------------------------------------------------- | ------------------------------------------------------------- |
+| `~/Library/LaunchAgents/net.consolaktif.discord.spoofdpi.plist` | spoofdpi’yi arka planda sürekli çalıştırır                    |
+| `~/Library/LaunchAgents/net.consolaktif.discord.launcher.plist` | Discord’u **proxy port açılana kadar bekleyip** öyle başlatır |
+| `~/Library/Application Support/Consolaktif-Discord/`            | Script’ler ve kontrol paneli buraya kopyalanır                |
+| `~/Library/Logs/net.consolaktif.discord.spoofdpi.*.log`         | Çalışma logları, 10 MB’ı geçerse otomatik sıkıştırılır (gzip) |
+| `~/Library/Logs/net.consolaktif.discord.spoofdpi.err.log`       | Hata logları, ilk bakılacak yer                               |
+| Masaüstü: `SplitWire Kontrol`                                   | Discord’u Proxy ile **Başlat / Durdur** paneli                |
 
 ---
 
 ## 3. Gerekenler
 
-- macOS 12 (Monterey) veya daha yeni
-- **Discord** uygulaması `/Applications` klasöründe **bulunmalı** (kurulum kontrol eder, yoksa durdurur)
-- **Homebrew** (yoksa otomatik indirilir)
+- macOS 12 (Monterey) veya üstü
+- `/Applications/Discord.app` içinde **Discord** kurulu olmalı
+- Homebrew (yoksa kurulum sırasında otomatik yüklenir)
 
 ---
 
-## Eğer **_Discord'un_** Yoksa
+## 4. Eğer **Discord’un yoksa**
 
-Terminal’i aç, klasöre gir:
+Terminal’de:
 
 ```bash
 cd ~/Downloads/SplitWire-for-Macos-main
@@ -50,9 +46,9 @@ chmod +x *.sh
 
 ---
 
-## 4. Hızlı kurulum (3 adım)
+## 5. Hızlı Kurulum (3 adım)
 
-1. **Repoyu indir**, Terminal’i aç, klasöre gir:
+1. Terminal’de indirdiğin klasöre gir:
 
    ```bash
    cd ~/Downloads/SplitWire-for-Macos-main
@@ -60,16 +56,18 @@ chmod +x *.sh
    ./install.sh
    ```
 
-   - Homebrew yoksa **otomatik yüklenir** (şifre isteyebilir).
-   - spoofdpi yoksa **otomatik yüklenir**.
-   - Discord yoksa **“Discord bulunamadı”** uyarısı verip çıkar; yükleyip komutu tekrar çalıştırman yeterli.
+   - Homebrew yoksa otomatik kurar (şifre sorabilir).
+   - spoofdpi yoksa otomatik kurar.
+   - Discord yoksa hata verir → `install-discord.sh` ile yükleyip tekrar çalıştırabilirsin.
 
-2. Discord’u aç (veya oturumu kapatıp aç; kendisi açılacak).  
-   Artık **Discord trafiği spoofdpi üzerinden** gidiyor.
+2. Kurulum bitince masaüstünde **SplitWire Kontrol** kısayolu çıkar.
+   Buradan Proxy’yi **Başlat/Durdur** yapabilirsin.
+
+3. Discord’u aç → artık trafiği **spoofdpi** üzerinden gidiyor.
 
 ---
 
-## 3. Kaldırmak (2 saniye)
+## 6. Kaldırma (2 saniye)
 
 Aynı klasörde:
 
@@ -79,78 +77,90 @@ chmod +x *.sh
 ./uninstall.sh
 ```
 
-- Tüm plist’ler silinir.
-- Sistem proxy’sine dokunulmadıysa hiçbir ayar değişmez.
-- Homebrew ile spoofdpi’yi biz kurduysak onu da siler (isteğe bağlı).
+- Tüm plist’ler kaldırılır.
+- Masaüstündeki kısayol silinir.
+- İstersen loglar ve destek dosyaları da silinir.
+- İstersen Homebrew üzerinden kurulan **spoofdpi** paketi de kaldırılır.
 
 ---
 
-## 6. Logları okuma
+## 7. Logları Görüntüleme
 
-Bir şey ters giderse:
+Bir hata alırsan:
 
 ```bash
 tail -f ~/Library/Logs/net.consolaktif.discord.spoofdpi.err.log
 ```
 
-Çıkışları takip ederken Discord’u yeniden başlat.
+Logu izlerken Discord’u tekrar başlatabilirsin.
 
 ---
 
-## 7. Manuel kontrol
+## 8. Manuel Kontroller
 
 | İşlem                             | Komut                                                                  |
 | --------------------------------- | ---------------------------------------------------------------------- |
 | Servisleri listele                | `launchctl list \| grep net.consolaktif.discord`                       |
 | spoofdpi’yi yeniden başlat        | `launchctl kickstart -k gui/$(id -u)/net.consolaktif.discord.spoofdpi` |
 | Discord’u yeniden proxy’li başlat | `launchctl kickstart gui/$(id -u)/net.consolaktif.discord.launcher`    |
-| Durdur (geçici)                   | `launchctl stop net.consolaktif.discord.spoofdpi`                      |
+| Geçici durdur                     | `launchctl stop net.consolaktif.discord.spoofdpi`                      |
 
 ---
 
-## 8. Port veya ek parametre değiştirmek
+## 9. Port veya Parametre Değiştirmek
 
-1. Dosyayı aç:
+1. Script dosyasını aç:
+
    ```bash
    nano ~/Library/Application\ Support/Consolaktif-Discord/discord-spoofdpi.sh
    ```
-2. `LISTEN_PORT=8080` satırını istediğin portla değiştir.
-3. Kaydet, çık, sonra:
+
+2. Şu satırı değiştir:
+
+   ```
+   LISTEN_PORT=8080
+   ```
+
+   → istediğin port numarasını yaz.
+
+3. Servisi yeniden başlat:
+
    ```bash
    launchctl kickstart -k gui/$(id -u)/net.consolaktif.discord.spoofdpi
    ```
 
 ---
 
-## 9. Sıkça Sorulan Sorular
+## 10. SSS (Sıkça Sorulan Sorular)
 
-**S: Discord’u başka yerden açarsam proxy çalışır mı?**  
-Y: Dock, Spotlight, Launchpad fark etmez; her türlü `--proxy-server` parametresi eklenir.
+**❓ Discord’u Dock veya Spotlight’tan açarsam yine proxy ile mi çalışır?**
+✅ Evet, her açılışta `--proxy-server` parametresi otomatik eklenir.
 
-**S: Başka uygulamayı da yönlendirebilir miyim?**  
-Y: Script’ler sadece Discord’a özel. Farklı uygulama istersen plisti klonlayıp yolunu ve parametresini değiştirmen yeterli.
+**❓ Başka uygulamaları da yönlendirebilir miyim?**
+⚠️ Bu kurulum sadece Discord’a özel. Ama plist dosyasını kopyalayıp ayarlarsan diğer uygulamalara da yapabilirsin.
 
-**S: spoofdpi kapatılırsa ne olur?**  
-Y: 3 saniye içinde kendini yeniden başlatır (supervisor döngüsü).
+**❓ spoofdpi kapanırsa ne olur?**
+🔄 3 saniye içinde launchd yeniden başlatır.
 
-**S: Homebrew’ü başka yerden kurmuştum, tekrar kurar mı?**  
-Y: `command -v brew` bulursa hiç dokunmaz.
+**❓ Homebrew zaten kurulu, tekrar kurar mı?**
+❌ Hayır. `brew` komutunu bulursa hiç dokunmaz.
 
-**S: macOS güncellemesi bozar mı?**  
-Y: LaunchAgent kullanıcı seviyesinde olduğu için genellikle **etkilenmez**. Gerekirse `./install.sh` ile tekrar yüklersin.
-
----
-
-## 10. Performans & Dayanıklılık Özellikleri
-
-- **Port bekleme**: **0.2 s aralıklarla** **max 30 s** → **ilk oturumda bile** Discord **proxy’siz açılmaz**.
-- **Çift PID kilidi**: `flock` ile **race condition** engellenir.
-- **Log rotate**: **10 MB** geçince **otomatik gzip** + **yeni dosya**.
-- **CPU / RAM limit**: **%60 CPU**, **256 MB RAM** → **sistemi kitlemez**.
-- **Graceful shutdown**: **uninstall** sırasında **Discord’a haber verilir**, **çökme hissi** kalkar.
-- **Auto-repair port**: **8080 kapalıysa** **8081-8099 arası rastgele port** dener ve **Discord’u yeniden başlatır**.
+**❓ macOS güncellemesi sonrası bozulur mu?**
+Genellikle hayır. Çünkü `LaunchAgents` kullanıcı seviyesinde. Bozulursa `./install.sh` tekrar çalıştırman yeterli.
 
 ---
 
-**Hepsi bu kadar!**  
-**İyi oyunlar, bol emoji** 🎮
+## 11. Performans & Dayanıklılık Özellikleri
+
+- **Port Bekleme**: Discord başlatılmadan önce 30 saniye boyunca port hazır olana kadar beklenir.
+- **Log Rotate**: 10 MB dolunca log otomatik sıkıştırılır.
+- **CPU / RAM Limit**: %60 CPU ve 256 MB RAM sınırı → sistem kitlenmez.
+- **Graceful Uninstall**: Kaldırma sırasında Discord düzgünce kapatılır.
+- **Otomatik Port Değişimi**: 8080 doluysa 8081–8099 arası rastgele port denenir.
+
+---
+
+🎉 Hepsi bu kadar!
+Artık **Discord her açıldığında Proxy üzerinden** çalışacak.
+
+---

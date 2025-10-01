@@ -15,8 +15,14 @@ launchctl unload -w "$LAUNCH_AGENTS_DIR/$PLIST_LAUNCHER" 2>/dev/null || true
 rm -f "$LAUNCH_AGENTS_DIR/$PLIST_SPOOFDPI"
 rm -f "$LAUNCH_AGENTS_DIR/$PLIST_LAUNCHER"
 
-pkill -x Discord || true
-sleep 1
+echo "Discord kapatılıyor..."
+osascript -e 'tell application "Discord" to quit' 2>/dev/null || true
+sleep 3
+# Eğer hâlâ çalışıyorsa zorla kapat
+if pgrep -x "Discord" >/dev/null; then
+  echo "Discord kapanmadı, zorla kapatılıyor..."
+  pkill -x Discord || true
+fi
 
 echo "Uygulama dosyaları ve kısayollar temizleniyor..."
 rm -f "$HOME/Desktop/SplitWire Kontrol"
