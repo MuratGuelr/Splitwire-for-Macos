@@ -51,20 +51,12 @@ echo $$ > "$LOCK_FILE"
 LISTEN_HOST="127.0.0.1"
 LISTEN_PORT="${CD_PROXY_PORT:-8080}"
 
-# YENİ PARAMETRELER (eski -listen yok)
-SPOOFDPI_ARGS=(
-  -addr "$LISTEN_HOST"
-  -port "$LISTEN_PORT"
-)
+# **KESİN** yeni parametre (eski -listen YOK)
+"$SPOOF_BIN" -addr "$LISTEN_HOST" -port "$LISTEN_PORT" \
+  >> "$LOG_DIR/net.consolaktif.discord.spoofdpi.out.log" \
+  2>> "$LOG_DIR/net.consolaktif.discord.spoofdpi.err.log"
 
-echo "spoofdpi başlatılıyor: $SPOOF_BIN ${SPOOFDPI_ARGS[*]}"
-
-# Çökme durumunda yeniden başlat
-while true; do
-  "$SPOOF_BIN" "${SPOOFDPI_ARGS[@]}" \
-    >> "$LOG_DIR/net.consolaktif.discord.spoofdpi.out.log" \
-    2>> "$LOG_DIR/net.consolaktif.discord.spoofdpi.err.log"
-  EXIT_CODE=$?
-  echo "spoofdpi çıkış kodu ${EXIT_CODE}, 3 saniye sonra yeniden başlatılıyor..." >> "$LOG_DIR/net.consolaktif.discord.spoofdpi.out.log"
-  sleep 3
-done
+# **TEK SEFER** çalıştır (while yok – launchd zaten restart eder)
+EXIT_CODE=$?
+echo "spoofdpi çıkış kodu $EXIT_CODE" >> "$LOG_DIR/net.consolaktif.discord.spoofdpi.out.log"
+exit $EXIT_CODE

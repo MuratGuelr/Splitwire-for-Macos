@@ -10,7 +10,10 @@
         <string>-c</string>
         <string>
 timeout 30 bash -c 'until lsof -i :${CD_PROXY_PORT:-8080} >/dev/null 2>&1; do sleep 0.2; done'
-exec /Applications/Discord.app/Contents/MacOS/Discord --proxy-server=http://127.0.0.1:${CD_PROXY_PORT:-8080}
+# Discord’u başlat
+exec /Applications/Discord.app/Contents/MacOS/Discord --proxy-server=http://127.0.0.1:${CD_PROXY_PORT:-8080} &
+# 5 sn sonra proxy bağlantısını kontrol et, yoksa bildirim at
+(sleep 5 && netstat -an | grep -q ":${CD_PROXY_PORT:-8080}.*ESTABLISHED" || osascript -e 'display notification "Discord proxy’ye bağlanamadı" with title "SplitWire"') &
         </string>
     </array>
     <key>RunAtLoad</key>
