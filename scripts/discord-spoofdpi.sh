@@ -45,8 +45,10 @@ echo $$ > "$LOCK_FILE"
 LISTEN_HOST="127.0.0.1"
 LISTEN_PORT="8080"
 
+# YENİ PARAMETRELER
 SPOOFDPI_ARGS=(
-  "-listen" "${LISTEN_HOST}:${LISTEN_PORT}"
+  -addr "${LISTEN_HOST}"
+  -port "${LISTEN_PORT}"
 )
 
 echo "spoofdpi başlatılıyor: $SPOOF_BIN ${SPOOFDPI_ARGS[*]}"
