@@ -57,13 +57,30 @@ cp "$SCRIPT_DIR/scripts/control.sh" "$APP_SUPPORT_DIR/"
 cp "$SCRIPT_DIR/scripts/SplitWire Kontrol.command" "$APP_SUPPORT_DIR/"
 chmod +x "$APP_SUPPORT_DIR/control.sh"
 chmod +x "$APP_SUPPORT_DIR/SplitWire Kontrol.command"
+
+xattr -d com.apple.quarantine "$APP_SUPPORT_DIR/control.sh" 2>/dev/null || true
+xattr -d com.apple.quarantine "$APP_SUPPORT_DIR/SplitWire Kontrol.command" 2>/dev/null || true
+
+
 DESKTOP_SHORTCUT="$HOME/Desktop/SplitWire Kontrol"
 rm -f "$DESKTOP_SHORTCUT"
 ln -s "$APP_SUPPORT_DIR/SplitWire Kontrol.command" "$DESKTOP_SHORTCUT"
 checkmark "Masaüstüne 'SplitWire Kontrol' kısayolu eklendi."
 
 echo
-echo "Kurulum tamamlandı. Discord başlatılıyor..."
+echo "Kurulum tamamlandı. Proxy servisinin başlaması bekleniyor..."
+
+i=0
+while ! lsof -i :${CD_PROXY_PORT:-8080} &>/dev/null; do
+    sleep 0.5
+    i=$((i+1))
+    if [ "$i" -ge 20 ]; then # 10 saniye bekle
+        error "Proxy servisi 10 saniye içinde başlayamadı. Logları kontrol edin."
+        exit 1
+    fi
+done
+checkmark "Proxy servisi aktif. Discord başlatılıyor..."
+
 launchctl start net.consolaktif.discord.launcher
 
 echo
