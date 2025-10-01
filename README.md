@@ -43,7 +43,7 @@ Aşağıda **tüm dosyaların** (plistler, script’ler vs.) **son hâllerine uy
 1. **Repoyu indir**, Terminal’i aç, klasöre gir:
 
    ```bash
-   cd ~/Downloads/SplitWire-for-macOS/scripts
+   cd ~/Downloads/SplitWire-for-Macos-1.0.0/scripts
    ```
 
 2. **İzin sorunu yaşamamak için** önce çalıştırma hakkı ver:
