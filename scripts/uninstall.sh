@@ -31,14 +31,14 @@ echo "Kaldırma tamam."
 # ---------- Kullanıcı onayı: Log + destek dosyaları ----------
 echo ""
 read -rp "Log ve destek dosyalarını da silmek ister misiniz? (yes/no): " SECIM
-case "${SECIM,,}" in           # küçük harfe çevir
-  yes|y)
+case "$SECIM" in
+  [Yy][Ee][Ss]|[Yy])
     rm -rf "$APP_SUPPORT_DIR" \
            ~/Library/Logs/net.consolaktif.discord.* \
            ~/Library/LaunchAgents/net.consolaktif.discord.*
     echo "Tüm izler temizlendi."
     ;;
-  no|n|"")
+  [Nn][Oo]|[Nn]|"")
     echo "Log ve destek dosyaları bırakıldı. İsterseniz daha sonra şunu çalıştırabilirsiniz:"
     echo "  rm -rf \"$APP_SUPPORT_DIR\" ~/Library/Logs/net.consolaktif.discord.*"
     ;;
