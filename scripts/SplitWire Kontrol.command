@@ -36,6 +36,7 @@ elif [ "$USER_CHOICE" == "Durdur" ]; then
     osascript -e 'display notification "SplitWire servisleri durduruldu." with title "SplitWire"'
 fi
 
-kill $$
+osascript -e 'tell application "Terminal" to close (first window whose frontmost is true)' &> /dev/null
+
 
 exit 0

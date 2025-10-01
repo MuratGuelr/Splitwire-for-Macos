@@ -57,11 +57,8 @@ cp "$SCRIPT_DIR/scripts/control.sh" "$APP_SUPPORT_DIR/"
 cp "$SCRIPT_DIR/scripts/SplitWire Kontrol.command" "$APP_SUPPORT_DIR/"
 chmod +x "$APP_SUPPORT_DIR/control.sh"
 chmod +x "$APP_SUPPORT_DIR/SplitWire Kontrol.command"
-
 xattr -d com.apple.quarantine "$APP_SUPPORT_DIR/control.sh" 2>/dev/null || true
 xattr -d com.apple.quarantine "$APP_SUPPORT_DIR/SplitWire Kontrol.command" 2>/dev/null || true
-
-
 DESKTOP_SHORTCUT="$HOME/Desktop/SplitWire Kontrol"
 rm -f "$DESKTOP_SHORTCUT"
 ln -s "$APP_SUPPORT_DIR/SplitWire Kontrol.command" "$DESKTOP_SHORTCUT"
@@ -69,7 +66,6 @@ checkmark "Masaüstüne 'SplitWire Kontrol' kısayolu eklendi."
 
 echo
 echo "Kurulum tamamlandı. Proxy servisinin başlaması bekleniyor..."
-
 i=0
 while ! lsof -i :${CD_PROXY_PORT:-8080} &>/dev/null; do
     sleep 0.5
@@ -80,11 +76,12 @@ while ! lsof -i :${CD_PROXY_PORT:-8080} &>/dev/null; do
     fi
 done
 checkmark "Proxy servisi aktif. Discord başlatılıyor..."
-
 launchctl start net.consolaktif.discord.launcher
 
-echo
-checkmark "İşlem tamam! Discord'un açılması birkaç saniye sürebilir."
-echo "Hata ayıklama için log dosyaları:"
-echo "  $LOG_DIR/net.consolaktif.discord.spoofdpi.out.log"
-echo "  $LOG_DIR/net.consolaktif.discord.spoofdpi.err.log"
+# --- YENİ: Başarılı kurulum sonrası kullanıcıyı bilgilendir ve terminali kapat ---
+SUCCESS_MESSAGE="SplitWire kurulumu başarıyla tamamlandı! Discord şimdi başlatılıyor."
+osascript -e "display dialog \"$SUCCESS_MESSAGE\" with title \"Kurulum Başarılı\" buttons {\"Tamam\"} default button \"Tamam\" with icon note"
+
+# AppleScript ile ön plandaki terminal penceresini kapat
+osascript -e 'tell application "Terminal" to close (first window whose frontmost is true)' &> /dev/null
+# --- BİTTİ ---

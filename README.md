@@ -62,6 +62,8 @@ Aşağıda **tüm dosyaların** (plistler, script’ler vs.) **son hâllerine uy
 Aynı klasörde:
 
 ```bash
+cd ~/Downloads/SplitWire-for-Macos-main
+chmod +x *.sh
 ./uninstall.sh
 ```
 
