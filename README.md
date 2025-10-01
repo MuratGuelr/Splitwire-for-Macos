@@ -37,7 +37,7 @@
 1. **Repoyu indir**, Terminal’i aç, klasöre gir:
 
    ```bash
-   cd ~/Downloads/SplitWire-for-macOS/scripts
+   cd ~/Downloads/Splitwire-for-Macos-main/scripts
    ```
 
 2. **İzin sorunu yaşamamak için** önce çalıştırma hakkı ver:
