@@ -11,7 +11,7 @@ error() { echo "${RED}✖${RST} $*"; }
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
 # 1. Nihai Kontrol: Uygulama gerçekten var mı?
-# Homebrew'un ne düşündüğünü değil, dosya sistemini esas alıyoruz.
+# Bizim için tek gerçek, dosyanın fiziksel olarak var olmasıdır.
 if [ -d "/Applications/Discord.app" ]; then
     checkmark "Discord uygulaması /Applications klasöründe zaten mevcut."
     exit 0
@@ -19,7 +19,7 @@ fi
 
 # Eğer uygulama yoksa, kuruluma devam et
 warning "Discord uygulaması /Applications klasöründe bulunamadı."
-echo "Homebrew kullanılarak kurulum denenecek..."
+echo "Homebrew kullanılarak kurulum/onarım denenecek..."
 echo
 
 # 2. Homebrew Kontrolü ve Kurulumu
@@ -38,19 +38,21 @@ else
   checkmark "Homebrew zaten kurulu."
 fi
 
-# 3. Discord Kurulumu
+# 3. Discord Kurulumu/Yeniden Kurulumu
 echo
 warning "Discord, Homebrew ile /Applications klasörüne kuruluyor..."
 echo "Bu işlem internet hızınıza bağlı olarak birkaç dakika sürebilir."
 
-# Bu komut, Discord'u kurar. Eğer Homebrew kayıtlarında "kurulu" görünse bile
-# eksik olan uygulama dosyasını yerine koyacaktır.
-brew install --cask discord
+# --- DEĞİŞİKLİK: `install` yerine `reinstall` kullanıyoruz. ---
+# Bu komut, Homebrew'un "zaten kurulu" demesini engeller ve
+# eksik dosyaları zorla yeniden yükler.
+brew reinstall --cask discord
+# --- DEĞİŞİKLİK BİTTİ ---
 
 echo
 # 4. Son Doğrulama
 if [ -d "/Applications/Discord.app" ]; then
-    checkmark "Discord başarıyla kuruldu!"
+    checkmark "Discord başarıyla kuruldu veya onarıldı!"
     echo "Artık ana kuruluma './install.sh' komutu ile devam edebilirsiniz."
 else
     error "HATA: Discord kurulumu tamamlanmasına rağmen uygulama /Applications klasöründe bulunamadı."
