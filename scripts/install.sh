@@ -7,13 +7,16 @@ checkmark() { echo "${GRN}✔${RST} $*"; }
 warning() { echo "${YLW}⚠${RST} $*"; }
 error() { echo "${RED}✖${RST} $*"; }
 
-# Betiğin bulunduğu dizini al
+# BU KISIM ÖNEMLİ: Betiğin kendi bulunduğu dizini bulur.
+# Bu sayede betik nereden çalıştırılırsa çalıştırılsın yollar doğru olur.
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+PROJECT_ROOT_DIR=$(cd "$SCRIPT_DIR/.." && pwd) # Projenin ana klasörünü bulur
 
 # ---------- Homebrew yoksa kur ----------
 if ! command -v brew >/dev/null 2>&1; then
   warning "Homebrew bulunamadı, kuruluyor…"
-  bash "$SCRIPT_DIR/scripts/install-homebrew.sh"
+  # install-homebrew.sh'nin aynı klasörde olduğunu varsayar
+  bash "$SCRIPT_DIR/install-homebrew.sh"
   # Homebrew'un PATH'e eklenmesi için shell env'i değerlendir
   if [ -x "/opt/homebrew/bin/brew" ]; then
     eval "$(/opt/homebrew/bin/brew shellenv)"
@@ -48,12 +51,14 @@ mkdir -p "$APP_SUPPORT_DIR" "$LAUNCH_AGENTS_DIR" "$LOG_DIR"
 
 # ---------- Betikleri kopyala ve çalıştırılabilir yap ----------
 checkmark "Betiği uygulama destek klasörüne kopyalanıyor..."
-cp "$SCRIPT_DIR/scripts/discord-spoofdpi.sh" "$APP_SUPPORT_DIR/discord-spoofdpi.sh"
+# DÜZELTME: Artık SCRIPT_DIR doğrudan doğru yeri gösteriyor
+cp "$SCRIPT_DIR/discord-spoofdpi.sh" "$APP_SUPPORT_DIR/discord-spoofdpi.sh"
 chmod +x "$APP_SUPPORT_DIR/discord-spoofdpi.sh"
 
 # ---------- plist şablonlarını işle ve kopyala ----------
 checkmark "launchd servis dosyaları oluşturuluyor ve yükleniyor..."
-for template_file in "$SCRIPT_DIR"/launchd/*.plist.template; do
+# DÜZELTME: launchd klasörüne ulaşmak için ana klasör yolu kullanılıyor
+for template_file in "$PROJECT_ROOT_DIR"/launchd/*.plist.template; do
   filename=$(basename "$template_file" .template)
   target_file="$LAUNCH_AGENTS_DIR/$filename"
 
