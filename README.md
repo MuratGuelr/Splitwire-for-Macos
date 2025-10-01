@@ -38,6 +38,18 @@ Aşağıda **tüm dosyaların** (plistler, script’ler vs.) **son hâllerine uy
 
 ---
 
+## Eğer **_Discord'un_** Yoksa
+
+Terminal’i aç, klasöre gir:
+
+```bash
+cd ~/Downloads/SplitWire-for-Macos-main
+chmod +x *.sh
+./install-discord.sh
+```
+
+---
+
 ## 4. Hızlı kurulum (3 adım)
 
 1. **Repoyu indir**, Terminal’i aç, klasöre gir:
@@ -57,7 +69,7 @@ Aşağıda **tüm dosyaların** (plistler, script’ler vs.) **son hâllerine uy
 
 ---
 
-## 5. Kaldırmak (2 saniye)
+## 3. Kaldırmak (2 saniye)
 
 Aynı klasörde:
 
