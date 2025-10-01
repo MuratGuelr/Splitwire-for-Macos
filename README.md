@@ -43,7 +43,7 @@ Aşağıda **tüm dosyaların** (plistler, script’ler vs.) **son hâllerine uy
 1. **Repoyu indir**, Terminal’i aç, klasöre gir:
 
    ```bash
-   cd ~/Downloads/SplitWire-for-Macos-main/scripts
+   cd ~/Downloads/SplitWire-for-Macos-main
    chmod +x *.sh
    ./install.sh
    ```
