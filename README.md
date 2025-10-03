@@ -163,4 +163,42 @@ Genellikle hayır. Çünkü `LaunchAgents` kullanıcı seviyesinde. Bozulursa `.
 🎉 Hepsi bu kadar!
 Artık **Discord her açıldığında Proxy üzerinden** çalışacak.
 
+## Telif Hakkı
+
+```
+Copyright © 2025 Çağrı Taşkın
+
+Bu proje MIT lisanhttps://www.kimi.com/sı altında lisanslanmıştır.
+Detaylar için LICENSE dosyasına bakın.
+```
+
+---
+
+## Bağış ve Destek
+
+Bu programı kullanmak tamamen ücretsizdir. Kullanımından herhangi bir gelir elde etmiyorum. Ancak çalışmalarıma devam edebilmem için aşağıda bulunan bağış adreslerinden beni destekleyebilirsiniz. Github üzerinden (bu sayfanın en üstünden) projeye yıldız da bırakabilirsiniz.
+
+**GitHub Sponsor:**
+
+[![Sponsor](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/MuratGuelr)
+
+**Patreon:**
+
+[![Static Badge](https://img.shields.io/badge/MuratGuelr-purple?logo=patreon&label=Patreon)](https://www.patreon.com/posts/splitwire-for-v1-140359525?utm_medium=clipboard_copy&utm_source=copyLink&utm_campaign=postshare_creator&utm_content=join_link)
+
+---
+
+## Sorumluluk Reddi Beyanı
+
+**Bu yazılım eğitim amaçlı oluşturulmuştur.**
+
+- Bu araç sadece kodlama eğitimi ve kişisel kullanım amaçlıdır
+- Ticari kullanım için uygun değildir
+- Geliştirici, bu yazılımın kullanımından doğabilecek herhangi bir zarardan sorumlu değildir
+- Kullanıcılar bu yazılımı kendi sorumluluklarında kullanırlar
+- Discord isimli programın seçilmesi, ilgili yazılımın DPI ile erişilemez kılınan bir program üzerinde denenmesi gerekmesidir
+- Yasal düzenlemelere uygun kullanım kullanıcının sorumluluğundadır
+  > [!IMPORTANT]
+  > Bu programın kullanımından doğan her türlü yasal sorumluluk kullanan kişiye aittir. Uygulama yalnızca eğitim ve araştırma amaçları ile yazılmış ve düzenlenmiş olup; bu uygulamayı bu şartlar altında kullanmak ya da kullanmamak kullanıcının kendi seçimidir. Açık kaynak kodlarının paylaşıldığı Github isimli platformdaki bu proje, bilgi paylaşımı ve kodlama eğitimi amaçları ile yazılmış ve düzenlenmiştir.
+
 ---
