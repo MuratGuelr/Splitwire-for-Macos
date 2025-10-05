@@ -183,7 +183,7 @@ Artık **Discord her açıldığında Proxy üzerinden** çalışacak.
 ## Telif Hakkı
 
 ```
-Copyright © 2025 Çağrı Taşkın
+Copyright © 2025 ConsolAktif
 
 Bu proje MIT lisanhttps://www.kimi.com/sı altında lisanslanmıştır.
 Detaylar için LICENSE dosyasına bakın.
