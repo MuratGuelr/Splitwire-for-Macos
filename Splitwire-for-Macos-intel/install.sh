@@ -8,21 +8,60 @@ error() { echo "${RED}✖${RST} $*"; }
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
-if ! command -v brew >/dev/null 2>&1; then
-  warning "Homebrew bulunamadı, kuruluyor…"
-  bash "$SCRIPT_DIR/scripts/install-homebrew.sh"
+# Homebrew kurulumunu ve PATH ayarını geliştir
+setup_homebrew() {
+  if ! command -v brew >/dev/null 2>&1; then
+    warning "Homebrew bulunamadı, kuruluyor…"
+    bash "$SCRIPT_DIR/scripts/install-homebrew.sh"
+  fi
+  
+  # Homebrew PATH'ini ayarla
   if [ -x "/opt/homebrew/bin/brew" ]; then
     eval "$(/opt/homebrew/bin/brew shellenv)"
-  else
+    echo "Homebrew (Apple Silicon) PATH ayarlandı: /opt/homebrew"
+  elif [ -x "/usr/local/bin/brew" ]; then
     eval "$(/usr/local/bin/brew shellenv)"
+    echo "Homebrew (Intel) PATH ayarlandı: /usr/local"
+  else
+    error "Homebrew kurulumu başarısız oldu"
+    exit 1
   fi
-fi
+}
+
+setup_homebrew
 checkmark "Homebrew hazır"
 
-if ! brew list spoofdpi &>/dev/null; then
-  warning "spoofdpi kurulu değil, Homebrew ile kuruluyor..."
-  brew install spoofdpi
-fi
+# spoofdpi kurulumunu geliştir
+setup_spoofdpi() {
+  if ! brew list spoofdpi &>/dev/null; then
+    warning "spoofdpi kurulu değil, Homebrew ile kuruluyor..."
+    brew install spoofdpi
+  fi
+  
+  # spoofdpi binary'sinin varlığını kontrol et
+  local spoofdpi_path=""
+  if [ -x "/opt/homebrew/bin/spoofdpi" ]; then
+    spoofdpi_path="/opt/homebrew/bin/spoofdpi"
+  elif [ -x "/usr/local/bin/spoofdpi" ]; then
+    spoofdpi_path="/usr/local/bin/spoofdpi"
+  fi
+  
+  if [ -n "$spoofdpi_path" ]; then
+    echo "spoofdpi binary bulundu: $spoofdpi_path"
+    # Binary'nin çalışabilir olduğunu test et
+    if "$spoofdpi_path" -h >/dev/null 2>&1; then
+      echo "spoofdpi binary test edildi: OK"
+    else
+      warning "spoofdpi binary çalışmıyor, yeniden kuruluyor..."
+      brew reinstall spoofdpi
+    fi
+  else
+    error "spoofdpi binary bulunamadı"
+    exit 1
+  fi
+}
+
+setup_spoofdpi
 checkmark "spoofdpi hazır"
 
 if [[ ! -d "/Applications/Discord.app" ]]; then
@@ -55,10 +94,13 @@ done
 checkmark "Kontrol paneli kuruluyor..."
 cp "$SCRIPT_DIR/scripts/control.sh" "$APP_SUPPORT_DIR/"
 cp "$SCRIPT_DIR/scripts/SplitWire Kontrol.command" "$APP_SUPPORT_DIR/"
+cp "$SCRIPT_DIR/scripts/debug-system.sh" "$APP_SUPPORT_DIR/"
 chmod +x "$APP_SUPPORT_DIR/control.sh"
 chmod +x "$APP_SUPPORT_DIR/SplitWire Kontrol.command"
+chmod +x "$APP_SUPPORT_DIR/debug-system.sh"
 xattr -d com.apple.quarantine "$APP_SUPPORT_DIR/control.sh" 2>/dev/null || true
 xattr -d com.apple.quarantine "$APP_SUPPORT_DIR/SplitWire Kontrol.command" 2>/dev/null || true
+xattr -d com.apple.quarantine "$APP_SUPPORT_DIR/debug-system.sh" 2>/dev/null || true
 DESKTOP_SHORTCUT="$HOME/Desktop/SplitWire Kontrol"
 rm -f "$DESKTOP_SHORTCUT"
 ln -s "$APP_SUPPORT_DIR/SplitWire Kontrol.command" "$DESKTOP_SHORTCUT"

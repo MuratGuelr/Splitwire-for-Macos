@@ -23,20 +23,27 @@ echo "Homebrew kullanılarak kurulum/onarım denenecek..."
 echo
 
 # 2. Homebrew Kontrolü ve Kurulumu
-if ! command -v brew >/dev/null 2>&1; then
-  warning "Homebrew bulunamadı, önce o kuruluyor…"
-  bash "$SCRIPT_DIR/install-homebrew.sh"
+setup_homebrew_for_discord() {
+  if ! command -v brew >/dev/null 2>&1; then
+    warning "Homebrew bulunamadı, önce o kuruluyor…"
+    bash "$SCRIPT_DIR/scripts/install-homebrew.sh"
+  fi
   
   # Homebrew'u mevcut terminal oturumuna tanıt
   if [ -x "/opt/homebrew/bin/brew" ]; then
     eval "$(/opt/homebrew/bin/brew shellenv)"
-  else
+    echo "Homebrew (Apple Silicon) PATH ayarlandı: /opt/homebrew"
+  elif [ -x "/usr/local/bin/brew" ]; then
     eval "$(/usr/local/bin/brew shellenv)"
+    echo "Homebrew (Intel) PATH ayarlandı: /usr/local"
+  else
+    error "Homebrew kurulumu başarısız oldu"
+    exit 1
   fi
   checkmark "Homebrew başarıyla kuruldu."
-else
-  checkmark "Homebrew zaten kurulu."
-fi
+}
+
+setup_homebrew_for_discord
 
 # 3. Discord Kurulumu/Yeniden Kurulumu
 echo

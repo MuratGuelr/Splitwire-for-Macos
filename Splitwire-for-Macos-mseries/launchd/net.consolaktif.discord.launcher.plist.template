@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>net.consolaktif.discord.launcher</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/zsh</string>
+        <string>-c</string>
+        <string>
+# Proxy'nin 30 saniye içinde hazır olup olmadığını kontrol et
+echo "Proxy'nin başlatılması bekleniyor..."
+if ! timeout 30 bash -c 'until lsof -i :${CD_PROXY_PORT:-8080} &amp;>/dev/null; do sleep 0.2; done'; then
+    echo "HATA: Proxy 30 saniye içinde başlatılamadı."
+    # Kullanıcıya bir bildirim göster
+    osascript -e 'display notification "Proxy hizmeti zamanında başlamadı." with title "Discord Başlatıcı Hatası"'
+    exit 1
+fi
+echo "Proxy hazır. Discord başlatılıyor..."
+# Discord uygulamasını proxy ayarlarıyla başlat
+exec /Applications/Discord.app/Contents/MacOS/Discord --proxy-server="http://127.0.0.1:${CD_PROXY_PORT:-8080}"
+        </string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <false/>
+</dict>
+</plist>

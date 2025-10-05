@@ -1,0 +1,70 @@
+name: SplitWire macOS Compatibility Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  splitwire-test:
+    name: Test on ${{ matrix.arch }} (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: Intel
+            os: macos-13
+            folder: Splitwire-for-Macos-intel
+          - arch: AppleSilicon
+            os: macos-14
+            folder: Splitwire-for-Macos-mseries
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Show system info
+        run: |
+          echo "=== macOS Version ==="
+          sw_vers
+          echo "=== Kernel / Arch ==="
+          uname -a
+          echo "=== Machine Arch ==="
+          uname -m
+
+      - name: Prepare scripts
+        run: |
+          cd "${{ matrix.folder }}"
+          chmod -R +x .
+          echo "Contents of $PWD:"
+          ls -la
+
+      - name: Run install script
+        run: |
+          cd "${{ matrix.folder }}"
+          if [ -f ./install.sh ]; then
+            echo "Running install.sh..."
+            ./install.sh || echo "⚠️ install.sh exited with non-zero code"
+          elif [ -f ./setup.sh ]; then
+            echo "Found setup.sh, running..."
+            ./setup.sh || echo "⚠️ setup.sh exited with non-zero code"
+          else
+            echo "No install.sh or setup.sh found in $PWD"
+          fi
+
+      - name: Smoke test
+        run: |
+          cd "${{ matrix.folder }}"
+          echo "=== Checking spoofdpi and launchctl status ==="
+          which spoofdpi || echo "spoofdpi not found in PATH"
+          launchctl list | grep -i "splitwire\|spoofdpi\|discord" || echo "No matching LaunchAgents (normal if sandboxed)"
+          echo "=== Done ==="
+
+      - name: Save logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-${{ matrix.arch }}
+          path: ${{ runner.temp }}

@@ -29,6 +29,7 @@
 ## 3. Gerekenler
 
 - macOS 12 (Monterey) veya üstü
+- Apple Silicon (arm64) Mac (M1/M2/M3). Intel desteklenmez.
 - `/Applications/Discord.app` içinde **Discord** kurulu olmalı
 - Homebrew (yoksa kurulum sırasında otomatik yüklenir)
 
@@ -57,7 +58,8 @@ chmod +x *.sh
    ```
 
    - Homebrew yoksa otomatik kurar (şifre sorabilir).
-   - spoofdpi yoksa otomatik kurar.
+   - Xcode Command Line Tools yoksa otomatik kurar.
+   - spoofdpi yoksa otomatik kurar (ARM/Apple Silicon).
    - Discord yoksa hata verir → `install-discord.sh` ile yükleyip tekrar çalıştırabilirsin.
 
 2. Kurulum bitince masaüstünde **SplitWire Kontrol** kısayolu çıkar.
@@ -92,17 +94,7 @@ Bir hata alırsan:
 tail -f ~/Library/Logs/net.consolaktif.discord.spoofdpi.err.log
 ```
 
-Logu izlerken Discord'u tekrar başlatabilirsin.
-
-### Debug Bilgileri
-
-Sorun yaşıyorsan, sistem bilgilerini toplamak için:
-
-```bash
-~/Library/Application\ Support/Consolaktif-Discord/debug-system.sh
-```
-
-Bu script tüm sistem bilgilerini toplar ve sorunun kaynağını bulmanıza yardımcı olur.
+Logu izlerken Discord’u tekrar başlatabilirsin.
 
 ---
 
@@ -158,13 +150,6 @@ Bu script tüm sistem bilgilerini toplar ve sorunun kaynağını bulmanıza yard
 **❓ macOS güncellemesi sonrası bozulur mu?**
 Genellikle hayır. Çünkü `LaunchAgents` kullanıcı seviyesinde. Bozulursa `./install.sh` tekrar çalıştırman yeterli.
 
-**❓ M2/M3 Mac'lerde çalışmıyor mu?**
-✅ Evet, çalışır! M1/M2/M3/Intel tüm Mac'lerde test edilmiştir. Sorun yaşıyorsan:
-
-1. `debug-system.sh` script'ini çalıştır
-2. Homebrew'un doğru kurulduğunu kontrol et
-3. spoofdpi binary'sinin çalıştırılabilir olduğunu doğrula
-
 ---
 
 ## 11. Performans & Dayanıklılık Özellikleri
@@ -174,6 +159,7 @@ Genellikle hayır. Çünkü `LaunchAgents` kullanıcı seviyesinde. Bozulursa `.
 - **CPU / RAM Limit**: %60 CPU ve 256 MB RAM sınırı → sistem kitlenmez.
 - **Graceful Uninstall**: Kaldırma sırasında Discord düzgünce kapatılır.
 - **Otomatik Port Değişimi**: 8080 doluysa 8081–8099 arası rastgele port denenir.
+- **Apple Silicon Uyumlu**: Tüm bileşenler arm64 olacak şekilde doğrulanır; Rosetta gerekmez.
 
 ---
 
