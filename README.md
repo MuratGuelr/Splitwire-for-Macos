@@ -36,10 +36,24 @@
 
 ## 4. Eğer **Discord’un yoksa**
 
+### İntel Sistemler için :
+
 Terminal’de:
 
 ```bash
-cd ~/Downloads/SplitWire-for-Macos-main
+cd ~/Downloads/SplitWire-for-Macos-main/Splitwire-for-Macos-intel
+chmod +x *.sh
+./install-discord.sh
+```
+
+---
+
+### M Serisi Sistemler için :
+
+Terminal’de:
+
+```bash
+cd ~/Downloads/SplitWire-for-Macos-main/Splitwire-for-Macos-mseries
 chmod +x *.sh
 ./install-discord.sh
 ```
@@ -50,15 +64,25 @@ chmod +x *.sh
 
 1. Terminal’de indirdiğin klasöre gir:
 
-   ```bash
-   cd ~/Downloads/SplitWire-for-Macos-main
-   chmod +x *.sh
-   ./install.sh
-   ```
+### İntel Serisi Sistemler için :
 
-   - Homebrew yoksa otomatik kurar (şifre sorabilir).
-   - spoofdpi yoksa otomatik kurar.
-   - Discord yoksa hata verir → `install-discord.sh` ile yükleyip tekrar çalıştırabilirsin.
+```bash
+cd ~/Downloads/SplitWire-for-Macos-main/Splitwire-for-Macos-intel
+chmod +x *.sh
+./install.sh
+```
+
+### M Serisi Sistemler için :
+
+```bash
+cd ~/Downloads/SplitWire-for-Macos-main/Splitwire-for-Macos-mseries
+chmod +x *.sh
+./install.sh
+```
+
+- Homebrew yoksa otomatik kurar (şifre sorabilir).
+- spoofdpi yoksa otomatik kurar.
+- Discord yoksa hata verir → `install-discord.sh` ile yükleyip tekrar çalıştırabilirsin.
 
 2. Kurulum bitince masaüstünde **SplitWire Kontrol** kısayolu çıkar.
    Buradan Proxy’yi **Başlat/Durdur** yapabilirsin.
@@ -71,8 +95,18 @@ chmod +x *.sh
 
 Aynı klasörde:
 
+### İntel Serisi Sistemler için :
+
 ```bash
-cd ~/Downloads/SplitWire-for-Macos-main
+cd ~/Downloads/SplitWire-for-Macos-main/
+chmod +x *.sh
+./uninstall.sh
+```
+
+### M Serisi Sistemler için :
+
+```bash
+cd ~/Downloads/SplitWire-for-Macos-main/
 chmod +x *.sh
 ./uninstall.sh
 ```
