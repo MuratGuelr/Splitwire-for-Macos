@@ -98,7 +98,7 @@ Aynı klasörde:
 ### İntel Serisi Sistemler için :
 
 ```bash
-cd ~/Downloads/SplitWire-for-Macos-main/
+cd ~/Downloads/SplitWire-for-Macos-main/Splitwire-for-Macos-intel
 chmod +x *.sh
 ./uninstall.sh
 ```
@@ -106,7 +106,7 @@ chmod +x *.sh
 ### M Serisi Sistemler için :
 
 ```bash
-cd ~/Downloads/SplitWire-for-Macos-main/
+cd ~/Downloads/SplitWire-for-Macos-main/Splitwire-for-Macos-mseries
 chmod +x *.sh
 ./uninstall.sh
 ```
@@ -219,7 +219,7 @@ Artık **Discord her açıldığında Proxy üzerinden** çalışacak.
 ```
 Copyright © 2025 ConsolAktif
 
-Bu proje MIT lisanhttps://www.kimi.com/sı altında lisanslanmıştır.
+Bu proje MIT lisansı altında lisanslanmıştır.
 Detaylar için LICENSE dosyasına bakın.
 ```
 
