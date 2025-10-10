@@ -109,10 +109,12 @@ cp "$SCRIPT_DIR/scripts/control.sh" "$APP_SUPPORT_DIR/"
 cp "$SCRIPT_DIR/scripts/SplitWire Kontrol.command" "$APP_SUPPORT_DIR/"
 cp "$SCRIPT_DIR/scripts/debug-system.sh" "$APP_SUPPORT_DIR/"
 cp "$SCRIPT_DIR/scripts/logs.sh" "$APP_SUPPORT_DIR/" 2>/dev/null || true
+cp "$SCRIPT_DIR/scripts/SplitWire Loglar.command" "$APP_SUPPORT_DIR/" 2>/dev/null || true
 chmod +x "$APP_SUPPORT_DIR/control.sh"
 chmod +x "$APP_SUPPORT_DIR/SplitWire Kontrol.command"
 chmod +x "$APP_SUPPORT_DIR/debug-system.sh"
 chmod +x "$APP_SUPPORT_DIR/logs.sh" 2>/dev/null || true
+chmod +x "$APP_SUPPORT_DIR/SplitWire Loglar.command" 2>/dev/null || true
 xattr -d com.apple.quarantine "$APP_SUPPORT_DIR/control.sh" 2>/dev/null || true
 xattr -d com.apple.quarantine "$APP_SUPPORT_DIR/SplitWire Kontrol.command" 2>/dev/null || true
 xattr -d com.apple.quarantine "$APP_SUPPORT_DIR/debug-system.sh" 2>/dev/null || true
@@ -121,24 +123,10 @@ rm -f "$DESKTOP_SHORTCUT"
 ln -s "$APP_SUPPORT_DIR/SplitWire Kontrol.command" "$DESKTOP_SHORTCUT"
 LOGS_SHORTCUT="$HOME/Desktop/SplitWire Loglar"
 rm -f "$LOGS_SHORTCUT"
-ln -s "$APP_SUPPORT_DIR/logs.sh" "$LOGS_SHORTCUT"
+ln -s "$APP_SUPPORT_DIR/SplitWire Loglar.command" "$LOGS_SHORTCUT"
 checkmark "Masaüstüne 'SplitWire Kontrol' kısayolu eklendi."
 
 echo
-section "Proxy Bekleme"
-echo "Kurulum tamamlandı. Proxy servisinin başlaması bekleniyor..."
-i=0
-while ! lsof -i :${CD_PROXY_PORT:-8080} &>/dev/null; do
-    sleep 0.5
-    i=$((i+1))
-    if [ "$i" -ge 20 ]; then # 10 saniye bekle
-        error "Proxy servisi 10 saniye içinde başlayamadı. Logları kontrol edin."
-        exit 1
-    fi
-done
-checkmark "Proxy servisi aktif. Discord başlatılıyor..."
-
 hr
 echo "${GRN}Kurulum başarıyla tamamlandı.${RST}"
-
-nohup /Applications/Discord.app/Contents/MacOS/Discord --proxy-server="http://127.0.0.1:${CD_PROXY_PORT:-8080}" &>/dev/null &
+echo "SplitWire Kontrol panelinden başlatabilirsiniz."

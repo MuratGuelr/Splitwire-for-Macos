@@ -157,6 +157,11 @@ if [ -f "$SCRIPT_DIR/scripts/logs.sh" ]; then
   chmod +x "$APP_SUPPORT_DIR/logs.sh"
   xattr -d com.apple.quarantine "$APP_SUPPORT_DIR/logs.sh" 2>/dev/null || true
 fi
+if [ -f "$SCRIPT_DIR/scripts/SplitWire Loglar.command" ]; then
+  cp "$SCRIPT_DIR/scripts/SplitWire Loglar.command" "$APP_SUPPORT_DIR/"
+  chmod +x "$APP_SUPPORT_DIR/SplitWire Loglar.command"
+  xattr -d com.apple.quarantine "$APP_SUPPORT_DIR/SplitWire Loglar.command" 2>/dev/null || true
+fi
 xattr -d com.apple.quarantine "$APP_SUPPORT_DIR/control.sh" 2>/dev/null || true
 xattr -d com.apple.quarantine "$APP_SUPPORT_DIR/SplitWire Kontrol.command" 2>/dev/null || true
 DESKTOP_SHORTCUT="$HOME/Desktop/SplitWire Kontrol"
@@ -165,28 +170,14 @@ ln -s "$APP_SUPPORT_DIR/SplitWire Kontrol.command" "$DESKTOP_SHORTCUT"
 checkmark "Masaüstüne 'SplitWire Kontrol' kısayolu eklendi."
 
 # Loglar için masaüstü kısayolu (varsa)
-if [ -f "$APP_SUPPORT_DIR/logs.sh" ]; then
+if [ -f "$APP_SUPPORT_DIR/SplitWire Loglar.command" ]; then
   LOGS_SHORTCUT="$HOME/Desktop/SplitWire Loglar"
   rm -f "$LOGS_SHORTCUT"
-  ln -s "$APP_SUPPORT_DIR/logs.sh" "$LOGS_SHORTCUT"
+  ln -s "$APP_SUPPORT_DIR/SplitWire Loglar.command" "$LOGS_SHORTCUT"
   checkmark "Masaüstüne 'SplitWire Loglar' kısayolu eklendi."
 fi
 
 echo
-section "Proxy Bekleme"
-echo "Kurulum tamamlandı. Proxy servisinin başlaması bekleniyor..."
-i=0
-while ! lsof -i :${CD_PROXY_PORT:-8080} &>/dev/null; do
-    sleep 0.5
-    i=$((i+1))
-    if [ "$i" -ge 20 ]; then # 10 saniye bekle
-        error "Proxy servisi 10 saniye içinde başlayamadı. Logları kontrol edin."
-        exit 1
-    fi
-done
-checkmark "Proxy servisi aktif. Discord başlatılıyor..."
-
 hr
 echo "${GRN}Kurulum başarıyla tamamlandı.${RST}"
-
-nohup /Applications/Discord.app/Contents/MacOS/Discord --proxy-server="http://127.0.0.1:${CD_PROXY_PORT:-8080}" &>/dev/null &
+echo "SplitWire Kontrol panelinden başlatabilirsiniz."
