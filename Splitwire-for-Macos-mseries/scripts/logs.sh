@@ -42,6 +42,12 @@ notify_and_close() {
   exit 0
 }
 
+close_terminal() {
+  if command -v osascript >/dev/null 2>&1; then
+    osascript -e 'tell application "Terminal" to if (count of windows) > 0 then close (first window whose frontmost is true)' 2>/dev/null || true
+  fi
+}
+
 total_size_bytes() {
   local sum=0
   for f in "$OUT_LOG" "$ERR_LOG" "$OUT_LOG".*.gz "$ERR_LOG".*.gz; do
@@ -72,15 +78,15 @@ do_action() {
     3)
       ensure_logs
       if is_empty_or_missing "$ERR_LOG"; then notify_and_close "Hata logu bulunamadı veya boş."; fi
-      tail -n 200 "$ERR_LOG"; exit 0 ;;
+      tail -n 200 "$ERR_LOG"; close_terminal; exit 0 ;;
     4)
       ensure_logs
       if is_empty_or_missing "$OUT_LOG"; then notify_and_close "Çıktı logu bulunamadı veya boş."; fi
-      tail -n 200 "$OUT_LOG"; exit 0 ;;
+      tail -n 200 "$OUT_LOG"; close_terminal; exit 0 ;;
     5)
-      open "$LOG_DIR"; exit 0 ;;
+      open "$LOG_DIR"; close_terminal; exit 0 ;;
     6)
-      read -p "Tüm logları silmek istediğinize emin misiniz? (y/N): " ans; if [[ "$ans" =~ ^[Yy]$ ]]; then rm -f "$OUT_LOG" "$ERR_LOG" "$OUT_LOG".* "$ERR_LOG".*; echo "Silindi."; fi; exit 0 ;;
+      read -p "Tüm logları silmek istediğinize emin misiniz? (y/N): " ans; if [[ "$ans" =~ ^[Yy]$ ]]; then rm -f "$OUT_LOG" "$ERR_LOG" "$OUT_LOG".* "$ERR_LOG".*; echo "Silindi."; fi; close_terminal; exit 0 ;;
     menu|*)
       ;;
   esac
@@ -97,6 +103,7 @@ menu() {
   echo "q) Çıkış"
   read -p "Seçiminiz: " choice
   do_action "$choice"
+  close_terminal
   exit 0
 }
 
