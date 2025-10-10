@@ -55,7 +55,7 @@ timestamp() { date '+%Y-%m-%d %H:%M:%S'; }
 log() { echo "[$(timestamp)] [SplitWire] $*"; }
 
 # Log dosyalarını döndür (10MB üstü ise gzip)
-LOG_DIR="$HOME/Library/Logs"
+LOG_DIR="$HOME/Library/Logs/ConsolAktifSplitWireLog"
 OUT_LOG="$LOG_DIR/net.consolaktif.discord.spoofdpi.out.log"
 ERR_LOG="$LOG_DIR/net.consolaktif.discord.spoofdpi.err.log"
 rotate_if_large() {

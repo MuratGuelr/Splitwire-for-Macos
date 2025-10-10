@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-LOG_DIR="$HOME/Library/Logs"
+LOG_DIR="$HOME/Library/Logs/ConsolAktifSplitWireLog"
 OUT_LOG="$LOG_DIR/net.consolaktif.discord.spoofdpi.out.log"
 ERR_LOG="$LOG_DIR/net.consolaktif.discord.spoofdpi.err.log"
 APP_SUPPORT_DIR="$HOME/Library/Application Support/Consolaktif-Discord"

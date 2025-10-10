@@ -16,9 +16,9 @@
         <false/>
     </dict>
     <key>StandardOutPath</key>
-    <string>__USER_HOME__/Library/Logs/net.consolaktif.discord.spoofdpi.out.log</string>
+    <string>__USER_HOME__/Library/Logs/ConsolAktifSplitWireLog/net.consolaktif.discord.spoofdpi.out.log</string>
     <key>StandardErrorPath</key>
-    <string>__USER_HOME__/Library/Logs/net.consolaktif.discord.spoofdpi.err.log</string>
+    <string>__USER_HOME__/Library/Logs/ConsolAktifSplitWireLog/net.consolaktif.discord.spoofdpi.err.log</string>
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
