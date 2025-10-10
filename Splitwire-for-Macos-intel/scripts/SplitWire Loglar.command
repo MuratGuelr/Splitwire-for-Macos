@@ -5,8 +5,10 @@ LOGS_SH="$SCRIPT_DIR/logs.sh"
 
 USER_CHOICE=$(osascript <<'APPLESCRIPT'
 try
-  set dlg to display dialog "SplitWire Loglar" with title "SplitWire" buttons {"Hata tail -f", "Çıktı tail -f", "Son 200 Hata", "Son 200 Çıktı", "Finder'da Aç", "İptal"} default button "Finder'da Aç"
-  return button returned of dlg
+  set optionsList to {"Hata tail -f", "Çıktı tail -f", "Son 200 Hata", "Son 200 Çıktı", "Finder'da Aç"}
+  set theChoice to choose from list optionsList with title "SplitWire" with prompt "SplitWire Loglar" OK button name "Seç" cancel button name "İptal" without multiple selections allowed and empty selection allowed
+  if theChoice is false then return "İptal"
+  return (item 1 of theChoice)
 on error number -128
   return "İptal"
 end try
