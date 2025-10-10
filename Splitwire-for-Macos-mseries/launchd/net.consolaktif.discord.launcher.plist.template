@@ -9,17 +9,28 @@
         <string>/bin/zsh</string>
         <string>-c</string>
         <string>
-# Proxy'nin 30 saniye içinde hazır olup olmadığını kontrol et
-echo "Proxy'nin başlatılması bekleniyor..."
-if ! timeout 30 bash -c 'until lsof -i :${CD_PROXY_PORT:-8080} &amp;>/dev/null; do sleep 0.2; done'; then
-    echo "HATA: Proxy 30 saniye içinde başlatılamadı."
-    # Kullanıcıya bir bildirim göster
-    osascript -e 'display notification "Proxy hizmeti zamanında başlamadı." with title "Discord Başlatıcı Hatası"'
-    exit 1
+# Proxy'nin hazır olup olmadığını kontrol et (yumuşak zaman aşımı ile)
+# Port belirleme: .proxy_port dosyası varsa onu kullan, yoksa CD_PROXY_PORT veya 8080
+PORT_FILE="$HOME/Library/Application Support/Consolaktif-Discord/.proxy_port"
+if [ -f "$PORT_FILE" ]; then
+  PORT=$(cat "$PORT_FILE" 2>/dev/null | tr -d '\n' | tr -cd '0-9')
 fi
-echo "Proxy hazır. Discord başlatılıyor..."
+PORT=${PORT:-${CD_PROXY_PORT:-8080}}
+echo "Proxy'nin başlatılması bekleniyor (port: $PORT)..."
+DEADLINE=$((SECONDS+45))
+while true; do
+  if lsof -i :${PORT} &gt;/dev/null 2&gt;&amp;1; then
+    echo "Proxy hazır. Discord başlatılıyor..."
+    break
+  fi
+  if [ $SECONDS -ge $DEADLINE ]; then
+    echo "UYARI: Proxy 45 saniye içinde hazır olmadı, yine de Discord başlatılıyor..."
+    break
+  fi
+  sleep 0.2
+done
 # Discord uygulamasını proxy ayarlarıyla başlat
-exec /Applications/Discord.app/Contents/MacOS/Discord --proxy-server="http://127.0.0.1:${CD_PROXY_PORT:-8080}"
+exec /Applications/Discord.app/Contents/MacOS/Discord --proxy-server="http://127.0.0.1:${PORT}"
         </string>
     </array>
     <key>RunAtLoad</key>

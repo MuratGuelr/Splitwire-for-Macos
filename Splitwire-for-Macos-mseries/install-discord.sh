@@ -7,8 +7,15 @@ checkmark() { echo "${GRN}✔${RST} $*"; }
 warning() { echo "${YLW}⚠${RST} $*"; }
 error() { echo "${RED}✖${RST} $*"; }
 
+# Görsel yardımcılar (yalnızca çıktı, davranışı değiştirmez)
+hr() { printf "\n${YLW}────────────────────────────────────────────────────────${RST}\n"; }
+title() { hr; echo "${GRN}SplitWire • Discord Yükleyici (Apple Silicon)${RST}"; hr; }
+section() { printf "\n${YLW}▶${RST} %s\n" "$*"; }
+
 # Bu betiğin bulunduğu klasörü bul (install-homebrew.sh'e ulaşmak için)
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+
+title
 
 # Sadece Apple Silicon (arm64) desteklenir
 if [ "$(uname -m)" != "arm64" ]; then
@@ -29,6 +36,7 @@ echo "Homebrew kullanılarak kurulum/onarım denenecek..."
 echo
 
 # 2. Homebrew Kontrolü ve Kurulumu (ARM /opt/homebrew)
+section "Homebrew Kontrolü"
 if ! command -v brew >/dev/null 2>&1; then
   warning "Homebrew bulunamadı, önce o kuruluyor…"
   bash "$SCRIPT_DIR/install-homebrew.sh"
@@ -50,6 +58,7 @@ fi
 
 # 3. Discord Kurulumu/Yeniden Kurulumu
 echo
+section "Discord Kurulumu"
 warning "Discord, Homebrew ile /Applications klasörüne kuruluyor..."
 echo "Bu işlem internet hızınıza bağlı olarak birkaç dakika sürebilir."
 
@@ -60,6 +69,7 @@ brew reinstall --cask discord
 # --- DEĞİŞİKLİK BİTTİ ---
 
 echo
+section "Son Doğrulama"
 # 4. Son Doğrulama
 if [ -d "/Applications/Discord.app" ]; then
     checkmark "Discord başarıyla kuruldu veya onarıldı!"

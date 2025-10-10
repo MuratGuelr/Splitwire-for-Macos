@@ -6,7 +6,14 @@ checkmark() { echo "${GRN}✔${RST} $*"; }
 warning() { echo "${YLW}⚠${RST} $*"; }
 error() { echo "${RED}✖${RST} $*"; }
 
+# Görsel yardımcılar (yalnızca çıktı, davranışı değiştirmez)
+hr() { printf "\n${YLW}────────────────────────────────────────────────────────${RST}\n"; }
+title() { hr; echo "${GRN}SplitWire • Ana Kurulum (Apple Silicon)${RST}"; hr; }
+section() { printf "\n${YLW}▶${RST} %s\n" "$*"; }
+
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+
+title
 
 # Sadece Apple Silicon (arm64) desteklenir
 if [ "$(uname -m)" != "arm64" ]; then
@@ -15,6 +22,7 @@ if [ "$(uname -m)" != "arm64" ]; then
 fi
 
 # 1) Xcode Komut Satırı Araçları (CLT) kontrolü ve otomatik kurulum
+section "Xcode Komut Satırı Araçları"
 if ! xcode-select -p >/dev/null 2>&1; then
   warning "Xcode Komut Satırı Araçları bulunamadı, kuruluyor…"
   # Önce yazılım güncellemesinden doğrudan CLT etiketini bulup kurmayı deneyelim (tamamen otomatik)
@@ -50,6 +58,7 @@ fi
 
 # 2) Homebrew (arm64) kontrolü
 
+section "Homebrew Hazırlığı"
 if ! command -v brew >/dev/null 2>&1; then
   warning "Homebrew bulunamadı, kuruluyor…"
   bash "$SCRIPT_DIR/scripts/install-homebrew.sh"
@@ -68,6 +77,7 @@ if [ "$(brew --prefix 2>/dev/null || true)" != "/opt/homebrew" ]; then
   exit 1
 fi
 
+section "spoofdpi Kurulumu"
 if ! brew list spoofdpi &>/dev/null; then
   warning "spoofdpi kurulu değil, Homebrew ile kuruluyor..."
   brew install spoofdpi
@@ -102,6 +112,7 @@ if command -v file >/dev/null 2>&1 && [ -n "${SPOOFDPI_BIN}" ]; then
 fi
 checkmark "spoofdpi hazır (arm64)"
 
+section "Discord Kontrolü"
 if [[ ! -d "/Applications/Discord.app" ]]; then
   error "Discord uygulaması /Applications klasöründe bulunamadı."
   echo "Lütfen Discord'u indirip /Applications klasörüne taşıyın ve tekrar çalıştırın."
@@ -115,10 +126,12 @@ LOG_DIR="$HOME/Library/Logs"
 
 mkdir -p "$APP_SUPPORT_DIR" "$LAUNCH_AGENTS_DIR" "$LOG_DIR"
 
+section "Dosyalar Kopyalanıyor"
 checkmark "Betiği uygulama destek klasörüne kopyalanıyor..."
 cp "$SCRIPT_DIR/scripts/discord-spoofdpi.sh" "$APP_SUPPORT_DIR/discord-spoofdpi.sh"
 chmod +x "$APP_SUPPORT_DIR/discord-spoofdpi.sh"
 
+section "launchd Servisleri"
 checkmark "launchd servis dosyaları oluşturuluyor ve yükleniyor..."
 for template_file in "$SCRIPT_DIR"/launchd/*.plist.template; do
   filename=$(basename "$template_file" .template)
@@ -129,6 +142,7 @@ for template_file in "$SCRIPT_DIR"/launchd/*.plist.template; do
   launchctl load -w "$target_file"
 done
 
+section "Kontrol Paneli"
 checkmark "Kontrol paneli kuruluyor..."
 cp "$SCRIPT_DIR/scripts/control.sh" "$APP_SUPPORT_DIR/"
 cp "$SCRIPT_DIR/scripts/SplitWire Kontrol.command" "$APP_SUPPORT_DIR/"
@@ -136,12 +150,30 @@ chmod +x "$APP_SUPPORT_DIR/control.sh"
 chmod +x "$APP_SUPPORT_DIR/SplitWire Kontrol.command"
 xattr -d com.apple.quarantine "$APP_SUPPORT_DIR/control.sh" 2>/dev/null || true
 xattr -d com.apple.quarantine "$APP_SUPPORT_DIR/SplitWire Kontrol.command" 2>/dev/null || true
+
+# Log aracı kopyala
+if [ -f "$SCRIPT_DIR/scripts/logs.sh" ]; then
+  cp "$SCRIPT_DIR/scripts/logs.sh" "$APP_SUPPORT_DIR/"
+  chmod +x "$APP_SUPPORT_DIR/logs.sh"
+  xattr -d com.apple.quarantine "$APP_SUPPORT_DIR/logs.sh" 2>/dev/null || true
+fi
+xattr -d com.apple.quarantine "$APP_SUPPORT_DIR/control.sh" 2>/dev/null || true
+xattr -d com.apple.quarantine "$APP_SUPPORT_DIR/SplitWire Kontrol.command" 2>/dev/null || true
 DESKTOP_SHORTCUT="$HOME/Desktop/SplitWire Kontrol"
 rm -f "$DESKTOP_SHORTCUT"
 ln -s "$APP_SUPPORT_DIR/SplitWire Kontrol.command" "$DESKTOP_SHORTCUT"
 checkmark "Masaüstüne 'SplitWire Kontrol' kısayolu eklendi."
 
+# Loglar için masaüstü kısayolu (varsa)
+if [ -f "$APP_SUPPORT_DIR/logs.sh" ]; then
+  LOGS_SHORTCUT="$HOME/Desktop/SplitWire Loglar"
+  rm -f "$LOGS_SHORTCUT"
+  ln -s "$APP_SUPPORT_DIR/logs.sh" "$LOGS_SHORTCUT"
+  checkmark "Masaüstüne 'SplitWire Loglar' kısayolu eklendi."
+fi
+
 echo
+section "Proxy Bekleme"
 echo "Kurulum tamamlandı. Proxy servisinin başlaması bekleniyor..."
 i=0
 while ! lsof -i :${CD_PROXY_PORT:-8080} &>/dev/null; do
@@ -153,5 +185,8 @@ while ! lsof -i :${CD_PROXY_PORT:-8080} &>/dev/null; do
     fi
 done
 checkmark "Proxy servisi aktif. Discord başlatılıyor..."
+
+hr
+echo "${GRN}Kurulum başarıyla tamamlandı.${RST}"
 
 nohup /Applications/Discord.app/Contents/MacOS/Discord --proxy-server="http://127.0.0.1:${CD_PROXY_PORT:-8080}" &>/dev/null &

@@ -47,6 +47,19 @@ chmod +x *.sh
 ```
 
 ---
+## 4. Eğer **Discord’u Kaldırmak İstersen**
+
+### İntel Sistemler için :
+
+Terminal’de:
+
+```bash
+cd ~/Downloads/SplitWire-for-Macos-main/Splitwire-for-Macos-intel
+chmod +x *.sh
+./remove-discord.sh
+```
+
+---
 
 ### M Serisi Sistemler için :
 
@@ -55,7 +68,7 @@ Terminal’de:
 ```bash
 cd ~/Downloads/SplitWire-for-Macos-main/Splitwire-for-Macos-mseries
 chmod +x *.sh
-./install-discord.sh
+./remove-discord.sh
 ```
 
 ---

@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+GRN=$(tput setaf 2); YLW=$(tput setaf 3); RED=$(tput setaf 1); RST=$(tput sgr0)
+hr() { printf "\n${YLW}────────────────────────────────────────────────────────${RST}\n"; }
+title() { hr; echo "${RED}SplitWire • Kaldırıcı (Intel)${RST}"; hr; }
+section() { printf "\n${YLW}▶${RST} %s\n" "$*"; }
+
+title
 echo "Consolaktif Discord aracı kaldırılıyor..."
 
 LAUNCH_AGENTS_DIR="$HOME/Library/LaunchAgents"
@@ -9,12 +15,14 @@ LOG_DIR="$HOME/Library/Logs"
 PLIST_SPOOFDPI="net.consolaktif.discord.spoofdpi.plist"
 PLIST_LAUNCHER="net.consolaktif.discord.launcher.plist"
 
+section "Servisler Durduruluyor"
 echo "Servisler durduruluyor ve kaldırılıyor..."
 launchctl unload -w "$LAUNCH_AGENTS_DIR/$PLIST_SPOOFDPI" 2>/dev/null || true
 launchctl unload -w "$LAUNCH_AGENTS_DIR/$PLIST_LAUNCHER" 2>/dev/null || true
 rm -f "$LAUNCH_AGENTS_DIR/$PLIST_SPOOFDPI"
 rm -f "$LAUNCH_AGENTS_DIR/$PLIST_LAUNCHER"
 
+section "Discord Kapatılıyor"
 echo "Discord kapatılıyor..."
 osascript -e 'tell application "Discord" to quit' 2>/dev/null || true
 sleep 3
@@ -24,6 +32,7 @@ if pgrep -x "Discord" >/dev/null; then
   pkill -x Discord || true
 fi
 
+section "Dosyalar Temizleniyor"
 echo "Uygulama dosyaları ve kısayollar temizleniyor..."
 rm -f "$HOME/Desktop/SplitWire Kontrol"
 
@@ -46,4 +55,5 @@ if [[ "$response" =~ ^[Yy]$ ]]; then
 fi
 
 echo
-echo "Kaldırma işlemi tamamlandı."
+hr
+echo "${GRN}Kaldırma işlemi tamamlandı.${RST}"

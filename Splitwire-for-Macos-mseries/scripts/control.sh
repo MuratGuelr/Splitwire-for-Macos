@@ -20,8 +20,15 @@ start_services() {
 
     # 3. Proxy servisinin aktif olmasını bekle (En Önemli Adım)
     echo "Proxy servisinin başlaması bekleniyor..."
+    # Portu .proxy_port dosyasından oku; yoksa 8080 varsayılanını kullan
+    PORT_FILE="$HOME/Library/Application Support/Consolaktif-Discord/.proxy_port"
+    PORT=${CD_PROXY_PORT:-8080}
+    if [ -f "$PORT_FILE" ]; then
+        PORT=$(cat "$PORT_FILE" 2>/dev/null | tr -d '\n' | tr -cd '0-9')
+        PORT=${PORT:-${CD_PROXY_PORT:-8080}}
+    fi
     i=0
-    while ! lsof -i :${CD_PROXY_PORT:-8080} &>/dev/null; do
+    while ! lsof -i :${PORT} &>/dev/null; do
         sleep 0.5
         i=$((i+1))
         if [ "$i" -ge 20 ]; then # 10 saniyelik zaman aşımı
@@ -33,7 +40,7 @@ start_services() {
     echo "Proxy servisi aktif. Discord başlatılıyor..."
 
     # 4. Discord'u doğrudan ve güvenilir bir şekilde başlat
-    nohup /Applications/Discord.app/Contents/MacOS/Discord --proxy-server="http://127.0.0.1:${CD_PROXY_PORT:-8080}" &>/dev/null &
+    nohup /Applications/Discord.app/Contents/MacOS/Discord --proxy-server="http://127.0.0.1:${PORT}" &>/dev/null &
     
     echo "Başlatma isteği gönderildi. Discord birkaç saniye içinde açılacak."
 }
