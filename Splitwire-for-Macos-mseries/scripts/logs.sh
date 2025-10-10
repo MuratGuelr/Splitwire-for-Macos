@@ -24,6 +24,24 @@ ensure_logs() {
   : > /dev/null
 }
 
+is_empty_or_missing() {
+  local f="$1"
+  [ ! -f "$f" ] && return 0
+  [ ! -s "$f" ] && return 0
+  return 1
+}
+
+notify_and_close() {
+  local msg="$1"
+  if command -v osascript >/dev/null 2>&1; then
+    osascript -e "display notification \"$msg\" with title \"SplitWire Loglar\""
+    osascript -e 'tell application "Terminal" to if (count of windows) > 0 then close (first window whose frontmost is true)' 2>/dev/null || true
+  else
+    echo "$msg"
+  fi
+  exit 0
+}
+
 total_size_bytes() {
   local sum=0
   for f in "$OUT_LOG" "$ERR_LOG" "$OUT_LOG".*.gz "$ERR_LOG".*.gz; do
@@ -40,6 +58,34 @@ total_size_mb() {
   echo $((b/1024/1024))
 }
 
+do_action() {
+  local choice="${1:-menu}"
+  case "$choice" in
+    1)
+      ensure_logs
+      if is_empty_or_missing "$ERR_LOG"; then notify_and_close "Hata logu bulunamadı veya boş."; fi
+      exec tail -f "$ERR_LOG" ;;
+    2)
+      ensure_logs
+      if is_empty_or_missing "$OUT_LOG"; then notify_and_close "Çıktı logu bulunamadı veya boş."; fi
+      exec tail -f "$OUT_LOG" ;;
+    3)
+      ensure_logs
+      if is_empty_or_missing "$ERR_LOG"; then notify_and_close "Hata logu bulunamadı veya boş."; fi
+      tail -n 200 "$ERR_LOG"; exit 0 ;;
+    4)
+      ensure_logs
+      if is_empty_or_missing "$OUT_LOG"; then notify_and_close "Çıktı logu bulunamadı veya boş."; fi
+      tail -n 200 "$OUT_LOG"; exit 0 ;;
+    5)
+      open "$LOG_DIR"; exit 0 ;;
+    6)
+      read -p "Tüm logları silmek istediğinize emin misiniz? (y/N): " ans; if [[ "$ans" =~ ^[Yy]$ ]]; then rm -f "$OUT_LOG" "$ERR_LOG" "$OUT_LOG".* "$ERR_LOG".*; echo "Silindi."; fi; exit 0 ;;
+    menu|*)
+      ;;
+  esac
+}
+
 menu() {
   print_header
   echo "1) Hata logunu canlı izle (tail -f err)"
@@ -50,18 +96,15 @@ menu() {
   echo "6) Logları temizle (out/err ve arşivler)"
   echo "q) Çıkış"
   read -p "Seçiminiz: " choice
-  case "$choice" in
-    1) ensure_logs; exec tail -f "$ERR_LOG" ;;
-    2) ensure_logs; exec tail -f "$OUT_LOG" ;;
-    3) ensure_logs; exec tail -n 200 "$ERR_LOG" ;;
-    4) ensure_logs; exec tail -n 200 "$OUT_LOG" ;;
-    5) open "$LOG_DIR"; exit 0 ;;
-    6) read -p "Tüm logları silmek istediğinize emin misiniz? (y/N): " ans; if [[ "$ans" =~ ^[Yy]$ ]]; then rm -f "$OUT_LOG" "$ERR_LOG" "$OUT_LOG".* "$ERR_LOG".*; echo "Silindi."; fi; exit 0 ;;
-    q|Q) exit 0 ;;
-    *) echo "Geçersiz seçim"; exit 1 ;;
-  esac
+  do_action "$choice"
+  exit 0
 }
 
-menu "$@"
+# Argüman verilmişse doğrudan uygula (1..6), yoksa menüyü göster
+if [[ "${1:-}" =~ ^[1-6]$ ]]; then
+  do_action "$1"
+else
+  menu
+fi
 
 
