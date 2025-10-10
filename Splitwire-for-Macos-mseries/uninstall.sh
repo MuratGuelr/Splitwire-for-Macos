@@ -45,6 +45,7 @@ fi
 section "Dosyalar Temizleniyor"
 echo "Uygulama dosyaları ve kısayollar temizleniyor..."
 rm -f "$HOME/Desktop/SplitWire Kontrol"
+rm -f "$HOME/Desktop/SplitWire Loglar"
 
 echo
 if [ $AUTO_YES -eq 1 ] || [ $FULL_CLEAN -eq 1 ]; then

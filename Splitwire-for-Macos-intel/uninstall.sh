@@ -35,6 +35,7 @@ fi
 section "Dosyalar Temizleniyor"
 echo "Uygulama dosyaları ve kısayollar temizleniyor..."
 rm -f "$HOME/Desktop/SplitWire Kontrol"
+rm -f "$HOME/Desktop/SplitWire Loglar"
 
 echo
 read -p "Uygulama destek dosyalarını (kontrol paneli dahil) ve logları da silmek ister misiniz? (y/n): " response
