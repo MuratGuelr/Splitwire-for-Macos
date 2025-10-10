@@ -51,12 +51,14 @@ echo
 if [ $AUTO_YES -eq 1 ] || [ $FULL_CLEAN -eq 1 ]; then
   rm -rf "$APP_SUPPORT_DIR"
   rm -f "$LOG_DIR/net.consolaktif.discord.spoofdpi"*
+  rm -rf "$HOME/Library/Logs/ConsolAktifSplitWireLog"
   echo "Destek dosyaları ve loglar silindi."
 else
   read -p "Uygulama destek dosyalarını (kontrol paneli dahil) ve logları da silmek ister misiniz? (y/n): " response
   if [[ "$response" =~ ^[Yy]$ ]]; then
     rm -rf "$APP_SUPPORT_DIR"
     rm -f "$LOG_DIR/net.consolaktif.discord.spoofdpi"*
+    rm -rf "$HOME/Library/Logs/ConsolAktifSplitWireLog"
     echo "Destek dosyaları ve loglar silindi."
   fi
 fi

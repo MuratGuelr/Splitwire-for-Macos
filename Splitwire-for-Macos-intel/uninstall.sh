@@ -42,6 +42,7 @@ read -p "Uygulama destek dosyalarını (kontrol paneli dahil) ve logları da sil
 if [[ "$response" =~ ^[Yy]$ ]]; then
   rm -rf "$APP_SUPPORT_DIR"
   rm -f "$LOG_DIR/net.consolaktif.discord.spoofdpi"*
+  rm -rf "$HOME/Library/Logs/ConsolAktifSplitWireLog"
   echo "Destek dosyaları ve loglar silindi."
 fi
 
