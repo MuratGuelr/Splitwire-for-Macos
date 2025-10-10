@@ -1,12 +1,21 @@
 #!/bin/bash
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-LOGS_SH="$SCRIPT_DIR/logs.sh"
+LOG_DIR="$HOME/Library/Logs"
+OUT_LOG="$LOG_DIR/net.consolaktif.discord.spoofdpi.out.log"
+ERR_LOG="$LOG_DIR/net.consolaktif.discord.spoofdpi.err.log"
+
+is_empty_or_missing() {
+  local f="$1"
+  [ ! -f "$f" ] && return 0
+  [ ! -s "$f" ] && return 0
+  return 1
+}
 
 USER_CHOICE=$(osascript <<'APPLESCRIPT'
 try
-  set optionsList to {"Hata tail -f", "Çıktı tail -f", "Son 200 Hata", "Son 200 Çıktı", "Finder'da Aç"}
-  set theChoice to choose from list optionsList with title "SplitWire" with prompt "SplitWire Loglar" OK button name "Seç" cancel button name "İptal" without multiple selections allowed and empty selection allowed
+  set optionsList to {"Finder'da Aç", "Canlı Log (tail -f)", "Son 200 Çıktı"}
+  set theChoice to choose from list optionsList with title "SplitWire" with prompt "Log işlemi seçin" OK button name "Seç" cancel button name "İptal" without multiple selections allowed and empty selection allowed
   if theChoice is false then return "İptal"
   return (item 1 of theChoice)
 on error number -128
@@ -16,10 +25,30 @@ APPLESCRIPT
 )
 
 case "$USER_CHOICE" in
-  "Hata tail -f") exec "$LOGS_SH" 1 ;;
-  "Çıktı tail -f") exec "$LOGS_SH" 2 ;;
-  "Son 200 Hata") "$LOGS_SH" 3; osascript -e 'tell application "Terminal" to if (count of windows) > 0 then close (first window whose frontmost is true)'; exit 0 ;;
-  "Son 200 Çıktı") "$LOGS_SH" 4; osascript -e 'tell application "Terminal" to if (count of windows) > 0 then close (first window whose frontmost is true)'; exit 0 ;;
-  "Finder'da Aç") "$LOGS_SH" 5; osascript -e 'tell application "Terminal" to if (count of windows) > 0 then close (first window whose frontmost is true)'; exit 0 ;;
-  *) exit 0 ;;
+  "Finder'da Aç")
+    open "$LOG_DIR"
+    osascript -e 'tell application "Terminal" to if (count of windows) > 0 then close (first window whose frontmost is true)'
+    exit 0 ;;
+  "Canlı Log (tail -f)")
+    # Öncelik: Hata logu dolu ise onu, değilse çıktı logunu takip et
+    if is_empty_or_missing "$ERR_LOG" && is_empty_or_missing "$OUT_LOG"; then
+      osascript -e 'display notification "Log bulunamadı veya boş." with title "SplitWire Loglar"'
+      osascript -e 'tell application "Terminal" to if (count of windows) > 0 then close (first window whose frontmost is true)'
+      exit 0
+    fi
+    TARGET="$ERR_LOG"
+    if is_empty_or_missing "$ERR_LOG"; then TARGET="$OUT_LOG"; fi
+    exec bash -lc "tail -f \"$TARGET\"" ;;
+  "Son 200 Çıktı")
+    if is_empty_or_missing "$OUT_LOG"; then
+      osascript -e 'display notification "Çıktı logu bulunamadı veya boş." with title "SplitWire Loglar"'
+      osascript -e 'tell application "Terminal" to if (count of windows) > 0 then close (first window whose frontmost is true)'
+      exit 0
+    fi
+    # İçeriği kullanıcı kapatana kadar göstermek için less ile aç
+    exec bash -lc "tail -n 200 \"$OUT_LOG\" | less" ;;
+  *)
+    # İptal veya boş seçim: terminali kapat
+    osascript -e 'tell application "Terminal" to if (count of windows) > 0 then close (first window whose frontmost is true)'
+    exit 0 ;;
  esac
