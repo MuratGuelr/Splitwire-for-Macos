@@ -210,7 +210,7 @@ tail -n 50 ~/Library/Logs/ConsolAktifSplitWireLog/net.consolaktif.discord.spoofd
 
 ### Hızlı Kaldırma
 
-#### Apple Silicon:
+#### 🟢 Apple Silicon:
 
 ```bash
 cd ~/Downloads/SplitWire-for-Macos-main/Splitwire-for-Macos-mseries
@@ -239,9 +239,10 @@ Kaldırma sırasında size sorulacak:
 
 ### Discord'u Kaldırma (Opsiyonel)
 
-#### Apple Silicon:
+#### 🟢 Apple Silicon:
 
 ```bash
+cd ~/Downloads/SplitWire-for-Macos-main/Splitwire-for-Macos-mseries
 ./remove-discord.sh
 ```
 

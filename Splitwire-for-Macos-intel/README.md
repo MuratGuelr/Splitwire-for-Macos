@@ -210,7 +210,7 @@ tail -n 50 ~/Library/Logs/ConsolAktifSplitWireLog/net.consolaktif.discord.spoofd
 
 ### Hızlı Kaldırma
 
-#### Intel Mac:
+#### 🔵 Intel Mac:
 
 ```bash
 cd ~/Downloads/SplitWire-for-Macos-main/Splitwire-for-Macos-intel
@@ -239,9 +239,10 @@ Kaldırma sırasında size sorulacak:
 
 ### Discord'u Kaldırma (Opsiyonel)
 
-#### Intel Mac:
+#### 🔵 Intel Mac:
 
 ```bash
+cd ~/Downloads/SplitWire-for-Macos-main/Splitwire-for-Macos-intel
 ./remove-discord.sh
 ```
 
