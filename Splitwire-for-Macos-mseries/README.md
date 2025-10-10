@@ -125,7 +125,7 @@ ls -la /Applications/Discord.app
 #### 🟢 **Discord Yoksa - Apple Silicon (M Serisi) için:**
 
 ```bash
-cd Splitwire-for-Macos-mseries
+cd ~/Downloads/SplitWire-for-Macos-main/Splitwire-for-Macos-mseries
 chmod +x *.sh
 ./install-discord.sh
 ```
@@ -137,7 +137,7 @@ chmod +x *.sh
 #### 🟢 **Apple Silicon (M Serisi) için:**
 
 ```bash
-cd Splitwire-for-Macos-mseries
+cd ~/Downloads/SplitWire-for-Macos-main/Splitwire-for-Macos-mseries
 chmod +x *.sh
 ./install.sh
 ```
@@ -210,7 +210,7 @@ tail -n 50 ~/Library/Logs/ConsolAktifSplitWireLog/net.consolaktif.discord.spoofd
 
 ### Hızlı Kaldırma
 
-#### 🟢 Apple Silicon:
+#### Apple Silicon:
 
 ```bash
 cd ~/Downloads/SplitWire-for-Macos-main/Splitwire-for-Macos-mseries
@@ -239,7 +239,7 @@ Kaldırma sırasında size sorulacak:
 
 ### Discord'u Kaldırma (Opsiyonel)
 
-#### 🟢 Apple Silicon:
+#### Apple Silicon:
 
 ```bash
 cd ~/Downloads/SplitWire-for-Macos-main/Splitwire-for-Macos-mseries
@@ -361,7 +361,7 @@ cp ~/Library/LaunchAgents/net.consolaktif.discord.launcher.plist \
 </details>
 
 <details>
-<summary><strong>M1/M2/M3/M4 Mac'lerde çalışıyor mu?</strong></summary>
+<summary><strong>M2/M3/M4 Mac'lerde çalışıyor mu?</strong></summary>
 
 ✅ **Evet!** Tüm Apple Silicon (M1/M2/M3/M4) ve Intel Mac'lerde test edilmiştir. M serisi için özel olarak optimize edilmiş versiyon mevcuttur.
 

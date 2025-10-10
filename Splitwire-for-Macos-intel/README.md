@@ -125,7 +125,7 @@ ls -la /Applications/Discord.app
 #### 🔵 **Discord Yoksa - Intel Mac için:**
 
 ```bash
-cd Splitwire-for-Macos-intel
+cd ~/Downloads/SplitWire-for-Macos-main/Splitwire-for-Macos-intel
 chmod +x *.sh
 ./install-discord.sh
 ```
@@ -137,7 +137,7 @@ chmod +x *.sh
 #### 🔵 **Intel Mac için:**
 
 ```bash
-cd Splitwire-for-Macos-intel
+cd ~/Downloads/SplitWire-for-Macos-main/Splitwire-for-Macos-intel
 chmod +x *.sh
 ./install.sh
 ```
@@ -210,7 +210,7 @@ tail -n 50 ~/Library/Logs/ConsolAktifSplitWireLog/net.consolaktif.discord.spoofd
 
 ### Hızlı Kaldırma
 
-#### 🔵 Intel Mac:
+#### Intel Mac:
 
 ```bash
 cd ~/Downloads/SplitWire-for-Macos-main/Splitwire-for-Macos-intel
@@ -239,14 +239,12 @@ Kaldırma sırasında size sorulacak:
 
 ### Discord'u Kaldırma (Opsiyonel)
 
-#### 🔵 Intel Mac:
+#### Intel Mac:
 
 ```bash
 cd ~/Downloads/SplitWire-for-Macos-main/Splitwire-for-Macos-intel
 ./remove-discord.sh
 ```
-
----
 
 ## 🔍 Sorun Giderme
 
