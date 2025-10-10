@@ -239,12 +239,6 @@ Kaldırma sırasında size sorulacak:
 
 ### Discord'u Kaldırma (Opsiyonel)
 
-#### Intel Mac:
-
-```bash
-./remove-discord.sh
-```
-
 #### Apple Silicon:
 
 ```bash
