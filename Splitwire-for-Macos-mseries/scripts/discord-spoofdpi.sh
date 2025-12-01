@@ -15,23 +15,20 @@ if [ -z "${SPOOF_BIN}" ]; then
   exit 1
 fi
 
-APP_SUPPORT_DIR="$HOME/Library/Application Support/Consolaktif-Discord"
-mkdir -p "$APP_SUPPORT_DIR"
+# Loglama
+LOG_DIR="$HOME/Library/Logs/ConsolAktifSplitWireLog"
+mkdir -p "$LOG_DIR"
 
-# Port Sabitleme
-CHOSEN_PORT="8080"
-echo "$CHOSEN_PORT" > "$APP_SUPPORT_DIR/.proxy_port"
-
-LISTEN_HOST="127.0.0.1"
-
-# Çakışmayı önle
+# Eski processleri temizle
 pkill -x spoofdpi || true
 
-# ----------------------------------------------------------------
-# DÜZELTME: Senin versiyonuna uygun ÇİFT TİRE (--) kullanımı
-# ----------------------------------------------------------------
+echo "SpoofDPI Başlatılıyor..."
+
+# --listen-addr 127.0.0.1 : IPv4 zorlar
+# --enable-doh : DNS engelini aşar
+# --window-size 0 : Paket boyutunu manipüle eder (Türkiye için genelde gereklidir)
 exec "$SPOOF_BIN" \
-  --listen-addr "$LISTEN_HOST" \
-  --listen-port "$CHOSEN_PORT" \
+  --listen-addr 127.0.0.1 \
+  --listen-port 8080 \
   --enable-doh \
   --window-size 0
