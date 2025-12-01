@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# SpoofDPI bulucu (Intel ve M-Serisi uyumlu)
 find_spoofdpi() {
   local paths=( "/opt/homebrew/bin/spoofdpi" "/usr/local/bin/spoofdpi" "$HOME/.spoofdpi/bin/spoofdpi" )
   for path in "${paths[@]}"; do
@@ -15,18 +16,16 @@ if [ -z "${SPOOF_BIN}" ]; then
   exit 1
 fi
 
-# Loglama
+# Loglama Klasörü
 LOG_DIR="$HOME/Library/Logs/ConsolAktifSplitWireLog"
 mkdir -p "$LOG_DIR"
 
-# Eski processleri temizle
+# Eski süreçleri temizle
 pkill -x spoofdpi || true
 
-echo "SpoofDPI Başlatılıyor..."
+echo "SpoofDPI Başlatılıyor (Port: 8080, DoH: Aktif)..."
 
-# --listen-addr 127.0.0.1 : IPv4 zorlar
-# --enable-doh : DNS engelini aşar
-# --window-size 0 : Paket boyutunu manipüle eder (Türkiye için genelde gereklidir)
+# En kararlı parametreler
 exec "$SPOOF_BIN" \
   --listen-addr 127.0.0.1 \
   --listen-port 8080 \
