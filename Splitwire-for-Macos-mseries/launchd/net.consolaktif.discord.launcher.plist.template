@@ -4,62 +4,43 @@
 <dict>
     <key>Label</key>
     <string>net.consolaktif.discord.launcher</string>
-    
-    <!-- ORTAM DEĞİŞKENLERİ (Update Modülü İçin Şart) -->
-    <key>EnvironmentVariables</key>
-    <dict>
-        <key>http_proxy</key>
-        <string>http://127.0.0.1:8080</string>
-        <key>https_proxy</key>
-        <string>http://127.0.0.1:8080</string>
-        <key>all_proxy</key>
-        <string>http://127.0.0.1:8080</string>
-        <!-- HEM INTEL (/usr/local) HEM M-SERİSİ (/opt/homebrew) YOLLARI EKLİ -->
-        <key>PATH</key>
-        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
-    </dict>
-
     <key>ProgramArguments</key>
     <array>
         <string>/bin/zsh</string>
         <string>-c</string>
         <string>
-# ----------------------------------------------------------------------
-# 1. TEMİZLİK (UPDATE HATASINI VE BOZUK DOSYALARI ÖNLEME)
-# ----------------------------------------------------------------------
-# Bilgisayar açıldığında, önceki hatalı/yarım kalan güncellemeleri sil.
-# Bu komutlar hesabına veya ayarlarına zarar vermez, sadece önbelleği temizler.
+# ---------------------------------------------------------
+# 1. TEMİZLİK (Stuck on Update Çözümü)
+# ---------------------------------------------------------
+# Discord'un takılmasına neden olan "bekleyen güncelleme" klasörünü sil.
+# Bu klasör silinmezse Discord bozuk güncellemeyi yüklemeye çalışıp donar.
 rm -rf "$HOME/Library/Application Support/discord/pending"
 rm -rf "$HOME/Library/Application Support/discord/modules/pending"
 rm -rf "$HOME/Library/Caches/com.hnc.Discord.ShipIt"
-rm -rf "$HOME/Library/Caches/com.hnc.Discord/ShipIt_stderr.log"
 
-# ----------------------------------------------------------------------
-# 2. BEKLEME MODU (RACE CONDITION ÖNLEME)
-# ----------------------------------------------------------------------
-# Proxy (spoofdpi) servisi 8080 portunu açana kadar bekle.
-# Bilgisayar açılışında bu işlem internet gelene kadar 5-10 saniye sürebilir.
-echo "Launcher: Proxy bekleniyor..."
-DEADLINE=$((SECONDS+45))
-
+# ---------------------------------------------------------
+# 2. PROXY KONTROLÜ (Açılana kadar bekle)
+# ---------------------------------------------------------
+# Port 8080 açılmadan Discord başlarsa "Update Failed" verir.
+# Bu döngü proxy hazır olana kadar bekler.
+echo "Proxy bekleniyor..."
 while ! nc -z 127.0.0.1 8080 2>/dev/null; do
-  # 45 saniye içinde açılmazsa pes etme, yine de denemeye devam et
-  if [ $SECONDS -ge $DEADLINE ]; then 
-    echo "Zaman aşımı, yine de başlatılıyor..."
-    break 
-  fi
   sleep 1
 done
 
-# İnternet bağlantısının ve DNS'in tam oturması için ekstra 2 saniye nefes payı
-sleep 2
+# İnternetin tam oturması için 1 saniye nefes payı
+sleep 1
 
-# ----------------------------------------------------------------------
-# 3. BAŞLATMA
-# ----------------------------------------------------------------------
-# Ortam değişkenleri (EnvironmentVariables) sayesinde update modülü de proxy kullanır.
-# --ignore-certificate-errors: Proxy kullandığımız için SSL/Update hatasını önler.
-exec /Applications/Discord.app/Contents/MacOS/Discord --ignore-certificate-errors
+# ---------------------------------------------------------
+# 3. BAŞLATMA (Eski Usül + Update Garantisi)
+# ---------------------------------------------------------
+# Updater'ın proxy'yi görmesi için değişkenleri burada tanımlıyoruz (En garantisi).
+export http_proxy="http://127.0.0.1:8080"
+export https_proxy="http://127.0.0.1:8080"
+export all_proxy="http://127.0.0.1:8080"
+
+# Discord'u başlat
+exec /Applications/Discord.app/Contents/MacOS/Discord --proxy-server="http://127.0.0.1:8080" --ignore-certificate-errors
         </string>
     </array>
     <key>RunAtLoad</key>
