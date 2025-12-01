@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# --- Görsel Yardımcılar ---
 GRN=$(tput setaf 2); YLW=$(tput setaf 3); RED=$(tput setaf 1); RST=$(tput sgr0)
 checkmark() { echo "${GRN}✔${RST} $*"; }
 warning() { echo "${YLW}⚠${RST} $*"; }
@@ -10,16 +11,14 @@ title() { hr; echo "${GRN}SplitWire • Ana Kurulum (Apple Silicon)${RST}"; hr; 
 section() { printf "\n${YLW}▶${RST} %s\n" "$*"; }
 
 # ----------------------------------------------------------------------
-# GÜÇLENDİRİLMİŞ İKON DEĞİŞTİRME FONKSİYONU
+# İKON DEĞİŞTİRME FONKSİYONU (Swift)
 # ----------------------------------------------------------------------
 set_icon() {
     local icon_path="$1"
     local target_file="$2"
     
-    # Dosyalar yoksa çık
     if [ ! -f "$icon_path" ] || [ ! -f "$target_file" ]; then return; fi
 
-    # Geçici Swift kodu oluştur
     cat <<EOF > /tmp/seticon.swift
 import Cocoa
 let args = CommandLine.arguments
@@ -32,12 +31,8 @@ if let image = NSImage(contentsOfFile: iconPath) {
     workspace.setIcon(image, forFile: targetPath, options: [])
 }
 EOF
-
-    # Swift ile ikonu uygula
     /usr/bin/swift /tmp/seticon.swift "$icon_path" "$target_file" >/dev/null 2>&1 || true
     rm -f /tmp/seticon.swift
-    
-    # Finder'ı yenilemeye zorla (Dosyaya dokun)
     touch "$target_file"
 }
 # ----------------------------------------------------------------------
@@ -45,23 +40,21 @@ EOF
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 title
 
-# Sadece Apple Silicon (arm64) kontrolü
+# 1. Mimari Kontrolü
 if [ "$(uname -m)" != "arm64" ]; then
   error "Bu kurulum yalnızca Apple Silicon (arm64) içindir."
   exit 1
 fi
 
-# 1) Xcode CLT Kontrol (Swift için gerekli)
+# 2. Xcode CLT (İkon değiştirmek için gerekli)
 section "Xcode Komut Satırı Araçları"
 if ! xcode-select -p >/dev/null 2>&1; then
   warning "Xcode CLT kuruluyor..."
   xcode-select --install || true
-  # Kurulumun bitmesi beklenebilir ama genelde arka planda devam eder.
-  # Kullanıcı zaten daha önce kurduysa burayı geçer.
 fi
-checkmark "Xcode Komut Satırı Araçları kontrol edildi"
+checkmark "Xcode CLT kontrol edildi"
 
-# 2) Homebrew Kontrol
+# 3. Homebrew
 section "Homebrew Hazırlığı"
 if ! command -v brew >/dev/null 2>&1; then
   warning "Homebrew kuruluyor..."
@@ -70,106 +63,113 @@ if ! command -v brew >/dev/null 2>&1; then
 fi
 checkmark "Homebrew hazır"
 
+# 4. SpoofDPI
 section "spoofdpi Kurulumu"
 if ! brew list spoofdpi &>/dev/null; then
   brew install spoofdpi
-else
-  checkmark "spoofdpi zaten kurulu"
 fi
-
-# spoofdpi binary check
 SPOOFDPI_BIN=$(command -v spoofdpi || echo "/opt/homebrew/bin/spoofdpi")
 if [ ! -x "$SPOOFDPI_BIN" ]; then
     brew reinstall spoofdpi
 fi
-checkmark "spoofdpi binary doğrulandı"
+checkmark "spoofdpi hazır"
 
-# Discord Kontrol
+# 5. Discord Kontrolü
 if [[ ! -d "/Applications/Discord.app" ]]; then
-  error "Discord uygulaması /Applications klasöründe bulunamadı."
+  error "Discord uygulaması bulunamadı."
   exit 1
 fi
 checkmark "Discord bulundu"
 
-# Dizinleri hazırla
+# Klasörleri Hazırla
 APP_SUPPORT_DIR="$HOME/Library/Application Support/Consolaktif-Discord"
 LAUNCH_AGENTS_DIR="$HOME/Library/LaunchAgents"
 LOG_DIR="$HOME/Library/Logs/ConsolAktifSplitWireLog"
 mkdir -p "$APP_SUPPORT_DIR" "$LAUNCH_AGENTS_DIR" "$LOG_DIR"
 
-section "Dosyalar Kopyalanıyor"
-cp "$SCRIPT_DIR/scripts/discord-spoofdpi.sh" "$APP_SUPPORT_DIR/discord-spoofdpi.sh"
-chmod +x "$APP_SUPPORT_DIR/discord-spoofdpi.sh"
+# ----------------------------------------------------------------------
+# 6. KRİTİK AYAR: Update Döngüsünü Kırma (settings.json)
+# ----------------------------------------------------------------------
+section "Discord Ayarları Yapılandırılıyor"
+DISCORD_CONFIG_DIR="$HOME/Library/Application Support/discord"
+mkdir -p "$DISCORD_CONFIG_DIR"
+SETTINGS_FILE="$DISCORD_CONFIG_DIR/settings.json"
 
-section "launchd Servisleri"
+if [ ! -f "$SETTINGS_FILE" ]; then
+    echo '{"SKIP_HOST_UPDATE": true}' > "$SETTINGS_FILE"
+    checkmark "Ayar dosyası oluşturuldu (SKIP_HOST_UPDATE)."
+else
+    if ! grep -q "SKIP_HOST_UPDATE" "$SETTINGS_FILE"; then
+        # JSON'un sonuna ayarı ekle
+        sed -i '' '$ s/}/, "SKIP_HOST_UPDATE": true }/' "$SETTINGS_FILE" 2>/dev/null || echo '{"SKIP_HOST_UPDATE": true}' > "$SETTINGS_FILE"
+        checkmark "Ayar dosyası güncellendi (Update atlatıldı)."
+    else
+        checkmark "Ayar zaten mevcut."
+    fi
+fi
+
+# 7. Dosyaları Kopyala
+section "Dosyalar Kopyalanıyor"
+cp "$SCRIPT_DIR/scripts/discord-spoofdpi.sh" "$APP_SUPPORT_DIR/"
+cp "$SCRIPT_DIR/scripts/control.sh" "$APP_SUPPORT_DIR/"
+cp "$SCRIPT_DIR/scripts/SplitWire Kontrol.command" "$APP_SUPPORT_DIR/"
+if [ -f "$SCRIPT_DIR/scripts/SplitWire Loglar.command" ]; then
+    cp "$SCRIPT_DIR/scripts/SplitWire Loglar.command" "$APP_SUPPORT_DIR/"
+fi
+if [ -f "$SCRIPT_DIR/scripts/logs.sh" ]; then
+    cp "$SCRIPT_DIR/scripts/logs.sh" "$APP_SUPPORT_DIR/"
+fi
+
+# İzinleri Ver
+chmod +x "$APP_SUPPORT_DIR/"*.sh
+chmod +x "$APP_SUPPORT_DIR/"*.command
+xattr -d com.apple.quarantine "$APP_SUPPORT_DIR/"* 2>/dev/null || true
+
+# 8. Servisleri Yükle
+section "Servisler Yükleniyor"
 for template_file in "$SCRIPT_DIR"/launchd/*.plist.template; do
   filename=$(basename "$template_file" .template)
   target_file="$LAUNCH_AGENTS_DIR/$filename"
   echo "  -> $filename işleniyor..."
   sed "s|__USER_HOME__|$HOME|g" "$template_file" > "$target_file"
-  # Servisleri sıfırla
+  
+  # Eski servisi durdur ve yenisini yükle
   launchctl bootout gui/$(id -u)/$(basename "$filename" .plist) 2>/dev/null || true
   launchctl load -w "$target_file"
 done
 
-section "Kontrol Paneli ve İkonlar"
+# 9. İkonlar ve Kısayollar
+section "İkonlar ve Kısayollar"
 
-# 1. Dosyaları Kopyala
-cp "$SCRIPT_DIR/scripts/control.sh" "$APP_SUPPORT_DIR/"
-cp "$SCRIPT_DIR/scripts/SplitWire Kontrol.command" "$APP_SUPPORT_DIR/"
-chmod +x "$APP_SUPPORT_DIR/control.sh"
-chmod +x "$APP_SUPPORT_DIR/SplitWire Kontrol.command"
-xattr -d com.apple.quarantine "$APP_SUPPORT_DIR/control.sh" 2>/dev/null || true
-xattr -d com.apple.quarantine "$APP_SUPPORT_DIR/SplitWire Kontrol.command" 2>/dev/null || true
-
-# 2. Log Dosyasını Kopyala
-if [ -f "$SCRIPT_DIR/scripts/SplitWire Loglar.command" ]; then
-  cp "$SCRIPT_DIR/scripts/SplitWire Loglar.command" "$APP_SUPPORT_DIR/"
-  chmod +x "$APP_SUPPORT_DIR/SplitWire Loglar.command"
-  xattr -d com.apple.quarantine "$APP_SUPPORT_DIR/SplitWire Loglar.command" 2>/dev/null || true
-fi
-
-# 3. İKONLARI UYGULA (ÖNCE ANA DOSYALARA)
-echo "  -> İkonlar ana dosyalara işleniyor..."
-
-# SplitWire Kontrol -> Discord İkonu
 DISCORD_ICON="/Applications/Discord.app/Contents/Resources/electron.icns"
-if [ -f "$DISCORD_ICON" ]; then
+CONSOLE_ICON="/System/Applications/Utilities/Console.app/Contents/Resources/AppIcon.icns"
+# Yedek ikon yolu
+if [ ! -f "$CONSOLE_ICON" ]; then CONSOLE_ICON="/Applications/Utilities/Console.app/Contents/Resources/AppIcon.icns"; fi
+
+# Ana dosyalara ikon bas
+if [ -f "$DISCORD_ICON" ]; then 
+    echo "  -> Kontrol Paneli ikonu işleniyor..."
     set_icon "$DISCORD_ICON" "$APP_SUPPORT_DIR/SplitWire Kontrol.command"
 fi
-
-# SplitWire Loglar -> Konsol İkonu
-CONSOLE_ICON="/System/Applications/Utilities/Console.app/Contents/Resources/AppIcon.icns"
-if [ ! -f "$CONSOLE_ICON" ]; then
-    # Eski macOS sürümleri veya farklı konumlar için yedek
-    CONSOLE_ICON="/Applications/Utilities/Console.app/Contents/Resources/AppIcon.icns"
-fi
-
-if [ -f "$CONSOLE_ICON" ] && [ -f "$APP_SUPPORT_DIR/SplitWire Loglar.command" ]; then
+if [ -f "$CONSOLE_ICON" ] && [ -f "$APP_SUPPORT_DIR/SplitWire Loglar.command" ]; then 
+    echo "  -> Log Aracı ikonu işleniyor..."
     set_icon "$CONSOLE_ICON" "$APP_SUPPORT_DIR/SplitWire Loglar.command"
 fi
 
-section "Masaüstü Kısayolları"
-# 4. Kısayolları Oluştur (İkonları miras alacaklar)
+# Masaüstü Kısayolları
+DESKTOP_CTRL="$HOME/Desktop/SplitWire Kontrol"
+rm -f "$DESKTOP_CTRL"
+ln -s "$APP_SUPPORT_DIR/SplitWire Kontrol.command" "$DESKTOP_CTRL"
+if [ -f "$DISCORD_ICON" ]; then set_icon "$DISCORD_ICON" "$DESKTOP_CTRL"; fi
 
-# Kontrol Kısayolu
-DESKTOP_SHORTCUT="$HOME/Desktop/SplitWire Kontrol"
-rm -f "$DESKTOP_SHORTCUT"
-ln -s "$APP_SUPPORT_DIR/SplitWire Kontrol.command" "$DESKTOP_SHORTCUT"
-# Kısayola da ikon basmayı dene (Garanti olsun)
-if [ -f "$DISCORD_ICON" ]; then set_icon "$DISCORD_ICON" "$DESKTOP_SHORTCUT"; fi
-
-# Loglar Kısayolu
 if [ -f "$APP_SUPPORT_DIR/SplitWire Loglar.command" ]; then
-    LOGS_SHORTCUT="$HOME/Desktop/SplitWire Loglar"
-    rm -f "$LOGS_SHORTCUT"
-    ln -s "$APP_SUPPORT_DIR/SplitWire Loglar.command" "$LOGS_SHORTCUT"
-    # Kısayola da ikon basmayı dene
-    if [ -f "$CONSOLE_ICON" ]; then set_icon "$CONSOLE_ICON" "$LOGS_SHORTCUT"; fi
+    DESKTOP_LOGS="$HOME/Desktop/SplitWire Loglar"
+    rm -f "$DESKTOP_LOGS"
+    ln -s "$APP_SUPPORT_DIR/SplitWire Loglar.command" "$DESKTOP_LOGS"
+    if [ -f "$CONSOLE_ICON" ]; then set_icon "$CONSOLE_ICON" "$DESKTOP_LOGS"; fi
 fi
 
 echo
 hr
-echo "${GRN}Kurulum başarıyla tamamlandı.${RST}"
-echo "Masaüstünüzdeki ikonlar birkaç saniye içinde güncellenecektir."
-echo "Eğer ikonlar değişmezse bilgisayarı yeniden başlatabilirsiniz."
+echo "${GRN}Kurulum ve Ayarlar Tamamlandı!${RST}"
+echo "Discord'u yeniden başlatabilirsiniz."
