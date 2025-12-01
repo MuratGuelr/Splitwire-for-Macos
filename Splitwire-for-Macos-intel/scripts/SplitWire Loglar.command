@@ -1,60 +1,57 @@
 #!/bin/bash
 
+# 1. Terminali Gizle
+osascript -e 'tell application "Terminal" to set visible of front window to false'
+
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 LOG_DIR="$HOME/Library/Logs/ConsolAktifSplitWireLog"
 OUT_LOG="$LOG_DIR/net.consolaktif.discord.spoofdpi.out.log"
 ERR_LOG="$LOG_DIR/net.consolaktif.discord.spoofdpi.err.log"
 
-is_empty_or_missing() {
-  local f="$1"
-  [ ! -f "$f" ] && return 0
-  [ ! -s "$f" ] && return 0
-  return 1
-}
+TARGET_LOG="$ERR_LOG"
+if [ ! -s "$ERR_LOG" ]; then TARGET_LOG="$OUT_LOG"; fi
 
-USER_CHOICE=$(osascript <<'APPLESCRIPT'
-try
-  set dlg to display dialog "Log işlemi seçin" with title "SplitWire" buttons {"Finder'da Aç", "Son Hatalar", "Canlı Hata Logları"} default button "Son Hatalar"
-  return button returned of dlg
-on error number -128
-  return "İptal"
-end try
-APPLESCRIPT
+# Menü Seçimi
+USER_CHOICE=$(osascript <<EOF
+tell application "System Events"
+    activate
+    set myList to {"🔍 Son Hataları Göster", "⚡ Canlı Log Takibi", "📂 Klasörü Aç", "🧹 Logları Temizle"}
+    set theResult to choose from list myList with title "SplitWire Log Yöneticisi" with prompt "İşlem seçin:" default items {"🔍 Son Hataları Göster"} OK button name "Seç" cancel button name "İptal"
+    if theResult is false then return "İptal"
+    return item 1 of theResult
+end tell
+EOF
 )
 
 case "$USER_CHOICE" in
-  "Finder'da Aç")
-    open "$LOG_DIR"
-    osascript -e 'tell application "Terminal" to if (count of windows) > 0 then close (first window whose frontmost is true)'
-    exit 0 ;;
-  "Canlı Hata Logları")
-    # Öncelik: Hata logu dolu ise onu, değilse çıktı logunu takip et
-    if is_empty_or_missing "$ERR_LOG" && is_empty_or_missing "$OUT_LOG"; then
-      osascript -e 'display notification "Log bulunamadı veya boş." with title "SplitWire Loglar"'
-      osascript -e 'tell application "Terminal" to if (count of windows) > 0 then close (first window whose frontmost is true)'
-      exit 0
-    fi
-    TARGET="$ERR_LOG"
-    if is_empty_or_missing "$ERR_LOG"; then TARGET="$OUT_LOG"; fi
-    # ANSI kaçışlarını temizleyerek canlı izle
-    exec bash -lc "tail -f \"$TARGET\" | /usr/bin/perl -pe 's/\e\[[0-9;]*[A-Za-z]//g'" ;;
-  "Son Hatalar")
-    # Öncelikle hata logundan, yoksa çıktı logundan oku
-    SRC="$ERR_LOG"
-    if is_empty_or_missing "$ERR_LOG"; then SRC="$OUT_LOG"; fi
-    if is_empty_or_missing "$SRC"; then
-      osascript -e 'display notification "Gösterilecek log bulunamadı." with title "SplitWire Loglar"'
-      osascript -e 'tell application "Terminal" to if (count of windows) > 0 then close (first window whose frontmost is true)'
-      exit 0
-    fi
-    # Son 200 satırı ANSI'siz geçici dosyaya yaz ve TextEdit ile aç
-    TMP_FILE="$LOG_DIR/LastErrors.txt"
-    /bin/bash -lc "tail -n 200 \"$SRC\" | /usr/bin/perl -pe 's/\e\[[0-9;]*[A-Za-z]//g' > \"$TMP_FILE\""
-    open -a TextEdit "$TMP_FILE"
-    osascript -e 'tell application "Terminal" to if (count of windows) > 0 then close (first window whose frontmost is true)'
-    exit 0 ;;
-  *)
-    # İptal veya boş seçim: terminali kapat
-    osascript -e 'tell application "Terminal" to if (count of windows) > 0 then close (first window whose frontmost is true)'
-    exit 0 ;;
- esac
+    "📂 Klasörü Aç")
+        open "$LOG_DIR" ;;
+        
+    "🔍 Son Hataları Göster")
+        if [ ! -f "$TARGET_LOG" ]; then
+            osascript -e 'display alert "Log yok." message "Henüz log kaydı oluşmamış."'
+        else
+            TMP_FILE="/tmp/SplitWire_Son_Log.txt"
+            tail -n 100 "$TARGET_LOG" | sed -E 's/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[mGK]//g' > "$TMP_FILE"
+            open -a TextEdit "$TMP_FILE"
+        fi ;;
+        
+    "⚡ Canlı Log Takibi")
+        osascript <<END
+tell application "Terminal"
+    set newWindow to do script "clear; echo '--- SplitWire Canlı Log (Çıkış için pencereyi kapatın) ---'; tail -f \"$TARGET_LOG\""
+    set custom title of newWindow to "SplitWire Live Logs"
+    set background color of newWindow to {0, 0, 0}
+    set normal text color of newWindow to {0, 65535, 0}
+    activate
+end tell
+END
+        ;;
+        
+    "🧹 Logları Temizle")
+        rm -f "$LOG_DIR"/*.log "$LOG_DIR"/*.gz
+        osascript -e 'display notification "Loglar temizlendi." with title "SplitWire"' ;;
+esac
+
+osascript -e 'tell application "Terminal" to close (first window whose visible is false)' &> /dev/null
+exit 0

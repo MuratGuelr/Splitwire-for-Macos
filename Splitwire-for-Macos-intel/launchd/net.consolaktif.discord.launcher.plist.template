@@ -4,33 +4,35 @@
 <dict>
     <key>Label</key>
     <string>net.consolaktif.discord.launcher</string>
+    
+    <!-- KRİTİK: Discord Updater'ın proxy görmesi için (Intel) -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>http_proxy</key>
+        <string>http://127.0.0.1:8080</string>
+        <key>https_proxy</key>
+        <string>http://127.0.0.1:8080</string>
+        <key>all_proxy</key>
+        <string>http://127.0.0.1:8080</string>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
+
     <key>ProgramArguments</key>
     <array>
         <string>/bin/zsh</string>
         <string>-c</string>
         <string>
-# Proxy'nin hazır olup olmadığını kontrol et (yumuşak zaman aşımı ile)
-# Port belirleme: .proxy_port dosyası varsa onu kullan, yoksa CD_PROXY_PORT veya 8080
-PORT_FILE="$HOME/Library/Application Support/Consolaktif-Discord/.proxy_port"
-if [ -f "$PORT_FILE" ]; then
-  PORT=$(cat "$PORT_FILE" 2>/dev/null | tr -d '\n' | tr -cd '0-9')
-fi
-PORT=${PORT:-${CD_PROXY_PORT:-8080}}
-echo "Proxy'nin başlatılması bekleniyor (port: $PORT)..."
+# Port 8080'in hazır olmasını bekle
+echo "Launcher: Proxy bekleniyor..."
 DEADLINE=$((SECONDS+45))
-while true; do
-  if lsof -i :${PORT} &gt;/dev/null 2&gt;&amp;1; then
-    echo "Proxy hazır. Discord başlatılıyor..."
-    break
-  fi
-  if [ $SECONDS -ge $DEADLINE ]; then
-    echo "UYARI: Proxy 45 saniye içinde hazır olmadı, yine de Discord başlatılıyor..."
-    break
-  fi
-  sleep 0.2
+while ! nc -z 127.0.0.1 8080 2>/dev/null; do
+  if [ $SECONDS -ge $DEADLINE ]; then break; fi
+  sleep 0.5
 done
-# Discord uygulamasını proxy ayarlarıyla başlat
-exec /Applications/Discord.app/Contents/MacOS/Discord --proxy-server="http://127.0.0.1:${PORT}"
+
+# Discord'u başlat
+exec /Applications/Discord.app/Contents/MacOS/Discord --proxy-server="http://127.0.0.1:8080" --ignore-certificate-errors
         </string>
     </array>
     <key>RunAtLoad</key>
