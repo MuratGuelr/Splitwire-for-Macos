@@ -19,7 +19,10 @@ APP_SUPPORT_DIR="$HOME/Library/Application Support/Consolaktif-Discord"
 PORT_FILE="$APP_SUPPORT_DIR/.proxy_port"
 mkdir -p "$APP_SUPPORT_DIR"
 
-# Sabit Port Kullanalım (Sorun gidermek için otomatikten vazgeçip 8080'e sabitleyelim)
+# ----------------------------------------------------------------
+# PORT AYARI
+# Hata riskini azaltmak için 8080'e sabitliyoruz.
+# ----------------------------------------------------------------
 CHOSEN_PORT="8080"
 echo "$CHOSEN_PORT" > "$PORT_FILE"
 
@@ -33,12 +36,16 @@ LISTEN_HOST="127.0.0.1"
 
 echo "Başlatılıyor: Port $CHOSEN_PORT (DoH Aktif)"
 
-# Eğer önceki spoofdpi çalışıyorsa kapat
+# Varsa eskileri kapat
 pkill -x spoofdpi || true
 
-# KRİTİK: Sadece -enable-doh kullanıyoruz, window-size kaldırdık.
-# Bazen window-size update sunucusunu bozabiliyor.
+# ----------------------------------------------------------------
+# DÜZELTME BURADA: Parametre isimleri güncellendi
+# -port  -> -listen-port
+# -addr  -> -listen-addr
+# ----------------------------------------------------------------
 exec "$SPOOF_BIN" \
-  -addr "$LISTEN_HOST" \
-  -port "$CHOSEN_PORT" \
-  -enable-doh
+  -listen-addr "$LISTEN_HOST" \
+  -listen-port "$CHOSEN_PORT" \
+  -enable-doh \
+  -window-size 0
