@@ -3,30 +3,50 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>net.consolaktif.discord.spoofdpi</string>
+    <string>net.consolaktif.discord.launcher</string>
     <key>ProgramArguments</key>
     <array>
-        <string>__USER_HOME__/Library/Application Support/Consolaktif-Discord/discord-spoofdpi.sh</string>
+        <string>/bin/zsh</string>
+        <string>-c</string>
+        <string>
+# Ortam değişkenlerini sabitle
+export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+
+PORT_FILE="$HOME/Library/Application Support/Consolaktif-Discord/.proxy_port"
+if [ -f "$PORT_FILE" ]; then
+  PORT=$(cat "$PORT_FILE" 2>/dev/null | tr -d '\n' | tr -cd '0-9')
+fi
+PORT=${PORT:-${CD_PROXY_PORT:-8080}}
+
+echo "Proxy bekleniyor (port: $PORT)..."
+DEADLINE=$((SECONDS+45))
+
+# Port kontrolü
+while true; do
+  if nc -z 127.0.0.1 $PORT 2>/dev/null; then
+    echo "Proxy hazır. Discord başlatılıyor..."
+    break
+  fi
+  if [ $SECONDS -ge $DEADLINE ]; then
+    echo "UYARI: Proxy yanıt vermedi, yine de Discord başlatılıyor..."
+    break
+  fi
+  sleep 0.5
+done
+
+# KRİTİK DEĞİŞİKLİK: Discord'a proxy'yi zorla (Env Vars)
+export http_proxy="http://127.0.0.1:${PORT}"
+export https_proxy="http://127.0.0.1:${PORT}"
+export HTTP_PROXY="http://127.0.0.1:${PORT}"
+export HTTPS_PROXY="http://127.0.0.1:${PORT}"
+
+# Discord'u başlat
+exec /Applications/Discord.app/Contents/MacOS/Discord --proxy-server="http://127.0.0.1:${PORT}" --ignore-certificate-errors
+        </string>
     </array>
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>
-    <dict>
-        <key>SuccessfulExit</key>
-        <false/>
-        <key>Crashed</key>
-        <true/>
-    </dict>
-    <key>StandardOutPath</key>
-    <string>__USER_HOME__/Library/Logs/ConsolAktifSplitWireLog/net.consolaktif.discord.spoofdpi.out.log</string>
-    <key>StandardErrorPath</key>
-    <string>__USER_HOME__/Library/Logs/ConsolAktifSplitWireLog/net.consolaktif.discord.spoofdpi.err.log</string>
-    <key>EnvironmentVariables</key>
-    <dict>
-        <key>PATH</key>
-        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
-    </dict>
-    <key>ProcessType</key>
-    <string>Interactive</string>
+    <false/>
 </dict>
 </plist>
