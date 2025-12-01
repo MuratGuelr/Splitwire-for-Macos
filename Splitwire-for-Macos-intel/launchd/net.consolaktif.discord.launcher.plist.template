@@ -5,7 +5,7 @@
     <key>Label</key>
     <string>net.consolaktif.discord.launcher</string>
     
-    <!-- KRİTİK: Discord Updater'ın proxy görmesi için (Intel) -->
+    <!-- Proxy Ayarları (Discord Updater'ın görmesi için ZORUNLU) -->
     <key>EnvironmentVariables</key>
     <dict>
         <key>http_proxy</key>
@@ -14,8 +14,9 @@
         <string>http://127.0.0.1:8080</string>
         <key>all_proxy</key>
         <string>http://127.0.0.1:8080</string>
+        <!-- Hem Intel hem Apple Silicon yolları eklendi -->
         <key>PATH</key>
-        <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
     </dict>
 
     <key>ProgramArguments</key>
@@ -23,16 +24,41 @@
         <string>/bin/zsh</string>
         <string>-c</string>
         <string>
-# Port 8080'in hazır olmasını bekle
+# ----------------------------------------------------------------------
+# 1. TEMİZLİK (UPDATE HATASINI ÖNLEME)
+# ----------------------------------------------------------------------
+# Bilgisayar açıldığında, önceki hatalı/yarım kalan güncellemeleri sil.
+# Bu komutlar hesabına veya ayarlarına zarar vermez, sadece önbelleği temizler.
+rm -rf "$HOME/Library/Application Support/discord/pending"
+rm -rf "$HOME/Library/Application Support/discord/modules/pending"
+rm -rf "$HOME/Library/Caches/com.hnc.Discord.ShipIt"
+rm -rf "$HOME/Library/Caches/com.hnc.Discord/ShipIt_stderr.log"
+
+# ----------------------------------------------------------------------
+# 2. BEKLEME MODU (RACE CONDITION ÖNLEME)
+# ----------------------------------------------------------------------
+# Proxy (spoofdpi) servisi 8080 portunu açana kadar bekle.
+# Bilgisayar açılışında bu 5-10 saniye sürebilir.
 echo "Launcher: Proxy bekleniyor..."
 DEADLINE=$((SECONDS+45))
+
 while ! nc -z 127.0.0.1 8080 2>/dev/null; do
-  if [ $SECONDS -ge $DEADLINE ]; then break; fi
-  sleep 0.5
+  # 45 saniye içinde açılmazsa pes etme, yine de denemeye devam et
+  if [ $SECONDS -ge $DEADLINE ]; then 
+    echo "Zaman aşımı, yine de başlatılıyor..."
+    break 
+  fi
+  sleep 1
 done
 
-# Discord'u başlat
-exec /Applications/Discord.app/Contents/MacOS/Discord --proxy-server="http://127.0.0.1:8080" --ignore-certificate-errors
+# İnternet bağlantısının oturması için ekstra 2 saniye nefes payı
+sleep 2
+
+# ----------------------------------------------------------------------
+# 3. BAŞLATMA
+# ----------------------------------------------------------------------
+# Ortam değişkenleri (EnvironmentVariables) sayesinde update modülü de proxy kullanır.
+exec /Applications/Discord.app/Contents/MacOS/Discord --ignore-certificate-errors
         </string>
     </array>
     <key>RunAtLoad</key>
