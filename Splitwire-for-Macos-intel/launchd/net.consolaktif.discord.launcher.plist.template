@@ -5,7 +5,8 @@
     <key>Label</key>
     <string>net.consolaktif.discord.launcher</string>
     
-    <!-- İŞTE ÇÖZÜM BURASI: Update modülü bu değişkenleri okumak ZORUNDADIR -->
+    <!-- 1. ORTAM DEĞİŞKENLERİ (Senin "Çalışıyor" dediğin yöntem) -->
+    <!-- Bu sayede Discord'un Update modülü mecburen proxy kullanır -->
     <key>EnvironmentVariables</key>
     <dict>
         <key>http_proxy</key>
@@ -14,7 +15,7 @@
         <string>http://127.0.0.1:8080</string>
         <key>all_proxy</key>
         <string>http://127.0.0.1:8080</string>
-        <!-- Homebrew yolu -->
+        <!-- Hem Intel (/usr/local) Hem M-Serisi (/opt/homebrew) Yolları -->
         <key>PATH</key>
         <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
     </dict>
@@ -24,7 +25,19 @@
         <string>/bin/zsh</string>
         <string>-c</string>
         <string>
-# Port 8080 hazır olana kadar bekle
+# ----------------------------------------------------------------
+# 2. TEMİZLİK (KRİTİK ADIM)
+# Bu kısım olmazsa, Discord ikinci açılışta "Update Failed" hatasında kalır.
+# ----------------------------------------------------------------
+rm -rf "$HOME/Library/Application Support/discord/pending"
+rm -rf "$HOME/Library/Application Support/discord/modules/pending"
+rm -rf "$HOME/Library/Caches/com.hnc.Discord.ShipIt"
+rm -rf "$HOME/Library/Caches/com.hnc.Discord/ShipIt_stderr.log"
+
+# ----------------------------------------------------------------
+# 3. BEKLEME
+# Proxy hazır olana kadar bekle (Port 8080)
+# ----------------------------------------------------------------
 echo "Launcher: Proxy bekleniyor..."
 DEADLINE=$((SECONDS+45))
 while ! nc -z 127.0.0.1 8080 2>/dev/null; do
@@ -32,9 +45,14 @@ while ! nc -z 127.0.0.1 8080 2>/dev/null; do
   sleep 0.5
 done
 
-# Discord'u başlat
-# --proxy-server parametresini yine de ekliyoruz (çift dikiş olsun)
-# --ignore-certificate-errors: Update sırasında SSL hatası almaması için şart
+# İnternet bağlantısı için kısa bir nefes payı
+sleep 1
+
+# ----------------------------------------------------------------
+# 4. BAŞLATMA
+# ----------------------------------------------------------------
+# EnvironmentVariables yukarıda tanımlı olduğu için Updater proxy'yi görür.
+# --ignore-certificate-errors: Proxy kullandığımız için SSL hatası almamak adına şart.
 exec /Applications/Discord.app/Contents/MacOS/Discord --proxy-server="http://127.0.0.1:8080" --ignore-certificate-errors
         </string>
     </array>
