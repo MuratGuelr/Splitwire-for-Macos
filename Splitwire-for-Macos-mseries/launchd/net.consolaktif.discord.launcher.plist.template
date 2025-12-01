@@ -21,7 +21,7 @@ PORT=${PORT:-${CD_PROXY_PORT:-8080}}
 echo "Proxy bekleniyor (port: $PORT)..."
 DEADLINE=$((SECONDS+45))
 
-# macOS Sequoia uyumlu port kontrolü (nc -z)
+# Port kontrolü
 while true; do
   if nc -z 127.0.0.1 $PORT 2>/dev/null; then
     echo "Proxy hazır. Discord başlatılıyor..."
@@ -34,7 +34,13 @@ while true; do
   sleep 0.5
 done
 
-# Discord başlatılıyor
+# Discord'a proxy'yi zorla (Env Vars)
+export http_proxy="http://127.0.0.1:${PORT}"
+export https_proxy="http://127.0.0.1:${PORT}"
+export HTTP_PROXY="http://127.0.0.1:${PORT}"
+export HTTPS_PROXY="http://127.0.0.1:${PORT}"
+
+# Discord'u başlat
 exec /Applications/Discord.app/Contents/MacOS/Discord --proxy-server="http://127.0.0.1:${PORT}" --ignore-certificate-errors
         </string>
     </array>
