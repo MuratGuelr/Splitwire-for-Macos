@@ -5,134 +5,93 @@ GRN=$(tput setaf 2); YLW=$(tput setaf 3); RED=$(tput setaf 1); RST=$(tput sgr0)
 checkmark() { echo "${GRN}✔${RST} $*"; }
 warning() { echo "${YLW}⚠${RST} $*"; }
 error() { echo "${RED}✖${RST} $*"; }
-
-# Görsel yardımcılar (yalnızca çıktı, davranışı değiştirmez)
 hr() { printf "\n${YLW}────────────────────────────────────────────────────────${RST}\n"; }
 title() { hr; echo "${GRN}SplitWire • Ana Kurulum (Apple Silicon)${RST}"; hr; }
 section() { printf "\n${YLW}▶${RST} %s\n" "$*"; }
 
-SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# ----------------------------------------------------------------------
+# İKON DEĞİŞTİRME FONKSİYONU (Swift kullanarak, ek araç gerektirmez)
+# ----------------------------------------------------------------------
+set_icon() {
+    local icon_path="$1"
+    local target_file="$2"
+    
+    if [ ! -f "$icon_path" ] || [ ! -f "$target_file" ]; then return; fi
 
+    cat <<EOF > /tmp/seticon.swift
+import AppKit
+let args = CommandLine.arguments
+guard args.count == 3 else { exit(1) }
+if let image = NSImage(contentsOfFile: args[1]) {
+    if NSWorkspace.shared.setIcon(image, forFile: args[2], options: []) { exit(0) }
+}
+exit(1)
+EOF
+    /usr/bin/swift /tmp/seticon.swift "$icon_path" "$target_file" >/dev/null 2>&1 || true
+    rm -f /tmp/seticon.swift
+}
+# ----------------------------------------------------------------------
+
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 title
 
-# Sadece Apple Silicon (arm64) desteklenir
+# Sadece Apple Silicon (arm64) kontrolü
 if [ "$(uname -m)" != "arm64" ]; then
-  error "Bu kurulum yalnızca Apple Silicon (arm64) içindir. Intel macOS desteklenmiyor."
+  error "Bu kurulum yalnızca Apple Silicon (arm64) içindir."
   exit 1
 fi
 
-# 1) Xcode Komut Satırı Araçları (CLT) kontrolü ve otomatik kurulum
+# 1) Xcode CLT Kontrol
 section "Xcode Komut Satırı Araçları"
 if ! xcode-select -p >/dev/null 2>&1; then
-  warning "Xcode Komut Satırı Araçları bulunamadı, kuruluyor…"
-  # Önce yazılım güncellemesinden doğrudan CLT etiketini bulup kurmayı deneyelim (tamamen otomatik)
-  # Bu yöntem başarısız olursa GUI ile xcode-select --install komutuna düşer ve hazır olana kadar bekleriz
-  if command -v softwareupdate >/dev/null 2>&1; then
-    touch /tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress || true
-    CLT_LABEL=$(softwareupdate -l 2>/dev/null | awk -F"*" '/Command Line Tools/ {print $2}' | sed -e 's/^ *//' -e 's/ Label: //;q' || true)
-    if [ -n "${CLT_LABEL:-}" ]; then
-      softwareupdate -i "$CLT_LABEL" -v || true
-    fi
-    rm -f /tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress || true
-  fi
-
-  # Eğer hâlâ yoksa, GUI kurulumunu tetikle ve hazır olana kadar bekle
-  if ! xcode-select -p >/dev/null 2>&1; then
-    xcode-select --install || true
-    echo "Xcode Komut Satırı Araçlarının kurulumu bekleniyor (bu işlem birkaç dakika sürebilir)…"
-    i=0
-    # 15 dakika bekleme (90 x 10 sn)
-    while ! xcode-select -p >/dev/null 2>&1; do
-      sleep 10
-      i=$((i+1))
-      if [ "$i" -ge 90 ]; then
-        error "Xcode Komut Satırı Araçları 15 dakika içinde kurulamadı. Lütfen elle kurup tekrar deneyin."
-        exit 1
-      fi
-    done
-  fi
-  checkmark "Xcode Komut Satırı Araçları hazır"
-else
-  checkmark "Xcode Komut Satırı Araçları hazır"
+  warning "Xcode CLT kuruluyor..."
+  xcode-select --install || true
+  # Basit bekleme döngüsü yerine kullanıcıyı bilgilendirip devam edelim
+  # Swift ikon değişimi için CLT lazım ama kurulum devam etmeli.
 fi
+checkmark "Xcode Komut Satırı Araçları kontrol edildi"
 
-# 2) Homebrew (arm64) kontrolü
-
+# 2) Homebrew Kontrol
 section "Homebrew Hazırlığı"
 if ! command -v brew >/dev/null 2>&1; then
-  warning "Homebrew bulunamadı, kuruluyor…"
+  warning "Homebrew kuruluyor..."
   bash "$SCRIPT_DIR/scripts/install-homebrew.sh"
-  if [ -x "/opt/homebrew/bin/brew" ]; then
-    eval "$(/opt/homebrew/bin/brew shellenv)"
-  else
-    error "Homebrew ARM prefix'te bulunamadı (/opt/homebrew). Terminal'i Rosetta olmadan açıp tekrar deneyin."
-    exit 1
-  fi
+  eval "$(/opt/homebrew/bin/brew shellenv)"
 fi
 checkmark "Homebrew hazır"
 
-# ARM Homebrew doğrula
-if [ "$(brew --prefix 2>/dev/null || true)" != "/opt/homebrew" ]; then
-  error "Homebrew ARM prefix'te değil (/opt/homebrew). Terminal'i Rosetta olmadan açtığınızdan emin olun."
-  exit 1
-fi
-
 section "spoofdpi Kurulumu"
 if ! brew list spoofdpi &>/dev/null; then
-  warning "spoofdpi kurulu değil, Homebrew ile kuruluyor..."
   brew install spoofdpi
+else
+  checkmark "spoofdpi zaten kurulu"
 fi
 
-# spoofdpi ikilisini bul ve arm64 olduğundan emin ol
-SPOOFDPI_BIN=$(command -v spoofdpi || true)
-if [ -z "${SPOOFDPI_BIN}" ] || [ ! -x "${SPOOFDPI_BIN}" ]; then
-  # PATH'te değilse, arm64 brew yolunda aramayı dene
-  if [ -x "/opt/homebrew/bin/spoofdpi" ]; then
-    SPOOFDPI_BIN="/opt/homebrew/bin/spoofdpi"
-  fi
+# spoofdpi binary check
+SPOOFDPI_BIN=$(command -v spoofdpi || echo "/opt/homebrew/bin/spoofdpi")
+if [ ! -x "$SPOOFDPI_BIN" ]; then
+    brew reinstall spoofdpi
 fi
+checkmark "spoofdpi binary doğrulandı"
 
-if [ -z "${SPOOFDPI_BIN}" ] || [ ! -x "${SPOOFDPI_BIN}" ]; then
-  warning "spoofdpi ikilisi bulunamadı; yeniden kuruluyor…"
-  brew reinstall spoofdpi
-  SPOOFDPI_BIN=$(command -v spoofdpi || true)
-fi
-
-if command -v file >/dev/null 2>&1 && [ -n "${SPOOFDPI_BIN}" ]; then
-  if ! file "${SPOOFDPI_BIN}" | grep -qi "arm64"; then
-    warning "spoofdpi arm64 değil görünüyor, ARM olarak yeniden kuruluyor…"
-    brew uninstall -f spoofdpi || true
-    brew install spoofdpi
-    SPOOFDPI_BIN=$(command -v spoofdpi || true)
-    if [ -n "${SPOOFDPI_BIN}" ] && ! file "${SPOOFDPI_BIN}" | grep -qi "arm64"; then
-      error "spoofdpi arm64 olarak kurulamadı. Terminal'i Rosetta olmadan açtığınızdan ve /opt/homebrew kullandığınızdan emin olun."
-      exit 1
-    fi
-  fi
-fi
-checkmark "spoofdpi hazır (arm64)"
-
-section "Discord Kontrolü"
+# Discord Kontrol
 if [[ ! -d "/Applications/Discord.app" ]]; then
   error "Discord uygulaması /Applications klasöründe bulunamadı."
-  echo "Lütfen Discord'u indirip /Applications klasörüne taşıyın ve tekrar çalıştırın."
   exit 1
 fi
 checkmark "Discord bulundu"
 
+# Dizinleri hazırla
 APP_SUPPORT_DIR="$HOME/Library/Application Support/Consolaktif-Discord"
 LAUNCH_AGENTS_DIR="$HOME/Library/LaunchAgents"
-LOG_DIR="$HOME/Library/Logs"
-
+LOG_DIR="$HOME/Library/Logs/ConsolAktifSplitWireLog"
 mkdir -p "$APP_SUPPORT_DIR" "$LAUNCH_AGENTS_DIR" "$LOG_DIR"
 
 section "Dosyalar Kopyalanıyor"
-checkmark "Betiği uygulama destek klasörüne kopyalanıyor..."
 cp "$SCRIPT_DIR/scripts/discord-spoofdpi.sh" "$APP_SUPPORT_DIR/discord-spoofdpi.sh"
 chmod +x "$APP_SUPPORT_DIR/discord-spoofdpi.sh"
 
 section "launchd Servisleri"
-checkmark "launchd servis dosyaları oluşturuluyor ve yükleniyor..."
 for template_file in "$SCRIPT_DIR"/launchd/*.plist.template; do
   filename=$(basename "$template_file" .template)
   target_file="$LAUNCH_AGENTS_DIR/$filename"
@@ -142,8 +101,7 @@ for template_file in "$SCRIPT_DIR"/launchd/*.plist.template; do
   launchctl load -w "$target_file"
 done
 
-section "Kontrol Paneli"
-checkmark "Kontrol paneli kuruluyor..."
+section "Kontrol Paneli & Kısayollar"
 cp "$SCRIPT_DIR/scripts/control.sh" "$APP_SUPPORT_DIR/"
 cp "$SCRIPT_DIR/scripts/SplitWire Kontrol.command" "$APP_SUPPORT_DIR/"
 chmod +x "$APP_SUPPORT_DIR/control.sh"
@@ -151,33 +109,43 @@ chmod +x "$APP_SUPPORT_DIR/SplitWire Kontrol.command"
 xattr -d com.apple.quarantine "$APP_SUPPORT_DIR/control.sh" 2>/dev/null || true
 xattr -d com.apple.quarantine "$APP_SUPPORT_DIR/SplitWire Kontrol.command" 2>/dev/null || true
 
-# Log aracı kopyala
-if [ -f "$SCRIPT_DIR/scripts/logs.sh" ]; then
-  cp "$SCRIPT_DIR/scripts/logs.sh" "$APP_SUPPORT_DIR/"
-  chmod +x "$APP_SUPPORT_DIR/logs.sh"
-  xattr -d com.apple.quarantine "$APP_SUPPORT_DIR/logs.sh" 2>/dev/null || true
-fi
+# Kısayol oluştur
+DESKTOP_SHORTCUT="$HOME/Desktop/SplitWire Kontrol"
+rm -f "$DESKTOP_SHORTCUT"
+ln -s "$APP_SUPPORT_DIR/SplitWire Kontrol.command" "$DESKTOP_SHORTCUT"
+
+# Loglar
 if [ -f "$SCRIPT_DIR/scripts/SplitWire Loglar.command" ]; then
   cp "$SCRIPT_DIR/scripts/SplitWire Loglar.command" "$APP_SUPPORT_DIR/"
   chmod +x "$APP_SUPPORT_DIR/SplitWire Loglar.command"
   xattr -d com.apple.quarantine "$APP_SUPPORT_DIR/SplitWire Loglar.command" 2>/dev/null || true
-fi
-xattr -d com.apple.quarantine "$APP_SUPPORT_DIR/control.sh" 2>/dev/null || true
-xattr -d com.apple.quarantine "$APP_SUPPORT_DIR/SplitWire Kontrol.command" 2>/dev/null || true
-DESKTOP_SHORTCUT="$HOME/Desktop/SplitWire Kontrol"
-rm -f "$DESKTOP_SHORTCUT"
-ln -s "$APP_SUPPORT_DIR/SplitWire Kontrol.command" "$DESKTOP_SHORTCUT"
-checkmark "Masaüstüne 'SplitWire Kontrol' kısayolu eklendi."
-
-# Loglar için masaüstü kısayolu (varsa)
-if [ -f "$APP_SUPPORT_DIR/SplitWire Loglar.command" ]; then
+  
   LOGS_SHORTCUT="$HOME/Desktop/SplitWire Loglar"
   rm -f "$LOGS_SHORTCUT"
   ln -s "$APP_SUPPORT_DIR/SplitWire Loglar.command" "$LOGS_SHORTCUT"
-  checkmark "Masaüstüne 'SplitWire Loglar' kısayolu eklendi."
+fi
+
+section "İkonlar Ayarlanıyor"
+# 1. Kontrol Paneli -> Discord İkonu
+DISCORD_ICON="/Applications/Discord.app/Contents/Resources/electron.icns"
+if [ -f "$DESKTOP_SHORTCUT" ] && [ -f "$DISCORD_ICON" ]; then
+    echo "  -> Kontrol paneli ikonu: Discord"
+    set_icon "$DISCORD_ICON" "$DESKTOP_SHORTCUT"
+fi
+
+# 2. Loglar -> Konsol İkonu
+CONSOLE_ICON_1="/System/Applications/Utilities/Console.app/Contents/Resources/AppIcon.icns"
+CONSOLE_ICON_2="/Applications/Utilities/Console.app/Contents/Resources/AppIcon.icns"
+LOGS_SHORTCUT="$HOME/Desktop/SplitWire Loglar"
+
+if [ -f "$LOGS_SHORTCUT" ]; then
+    echo "  -> Log aracı ikonu: Konsol"
+    if [ -f "$CONSOLE_ICON_1" ]; then set_icon "$CONSOLE_ICON_1" "$LOGS_SHORTCUT"
+    elif [ -f "$CONSOLE_ICON_2" ]; then set_icon "$CONSOLE_ICON_2" "$LOGS_SHORTCUT"
+    fi
 fi
 
 echo
 hr
 echo "${GRN}Kurulum başarıyla tamamlandı.${RST}"
-echo "SplitWire Kontrol panelinden başlatabilirsiniz."
+echo "Masaüstünüzdeki 'SplitWire Kontrol' ile başlatabilirsiniz."

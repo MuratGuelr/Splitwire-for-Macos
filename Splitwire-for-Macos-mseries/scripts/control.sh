@@ -9,40 +9,21 @@ PLIST_LAUNCHER="$LAUNCH_AGENTS_DIR/$LAUNCHER_LABEL.plist"
 
 start_services() {
     echo "Servisler başlatılıyor..."
-    # 1. Servis tanımlarını launchd'ye yükle (spoofdpi'ın çalışmasını sağlar)
+    
+    # 1. Temiz bir başlangıç için önce unload yap
+    launchctl unload -w "$PLIST_SPOOFDPI" 2>/dev/null || true
+    launchctl unload -w "$PLIST_LAUNCHER" 2>/dev/null || true
+
+    # 2. Servisleri yükle
     launchctl load -w "$PLIST_SPOOFDPI" 2>/dev/null || true
     launchctl load -w "$PLIST_LAUNCHER" 2>/dev/null || true
 
-    # 2. Mevcut, belki de proxy'siz çalışan Discord'u kapat
-    echo "Mevcut Discord kapatılıyor..."
-    pkill -x Discord || true
-    sleep 1 # Prosesin tam olarak sonlanması için kısa bir bekleme
+    # 3. macOS 15+ için Kickstart (Zorla tetikleme)
+    # Bu komut servisin hemen çalışmasını garanti eder
+    launchctl kickstart -k gui/$(id -u)/$SPOOFDPI_LABEL 2>/dev/null || true
+    launchctl kickstart -k gui/$(id -u)/$LAUNCHER_LABEL 2>/dev/null || true
 
-    # 3. Proxy servisinin aktif olmasını bekle (En Önemli Adım)
-    echo "Proxy servisinin başlaması bekleniyor..."
-    # Portu .proxy_port dosyasından oku; yoksa 8080 varsayılanını kullan
-    PORT_FILE="$HOME/Library/Application Support/Consolaktif-Discord/.proxy_port"
-    PORT=${CD_PROXY_PORT:-8080}
-    if [ -f "$PORT_FILE" ]; then
-        PORT=$(cat "$PORT_FILE" 2>/dev/null | tr -d '\n' | tr -cd '0-9')
-        PORT=${PORT:-${CD_PROXY_PORT:-8080}}
-    fi
-    i=0
-    while ! lsof -i :${PORT} &>/dev/null; do
-        sleep 0.5
-        i=$((i+1))
-        if [ "$i" -ge 20 ]; then # 10 saniyelik zaman aşımı
-            echo "HATA: Proxy servisi 10 saniye içinde başlayamadı."
-            osascript -e 'display notification "Proxy servisi başlatılamadı. Logları kontrol edin." with title "SplitWire Hatası"'
-            exit 1
-        fi
-    done
-    echo "Proxy servisi aktif. Discord başlatılıyor..."
-
-    # 4. Discord'u doğrudan ve güvenilir bir şekilde başlat
-    nohup /Applications/Discord.app/Contents/MacOS/Discord --proxy-server="http://127.0.0.1:${PORT}" &>/dev/null &
-    
-    echo "Başlatma isteği gönderildi. Discord birkaç saniye içinde açılacak."
+    echo "Başlatma komutu gönderildi. Discord açılıyor..."
 }
 
 stop_services() {
@@ -57,7 +38,7 @@ stop_services() {
 }
 
 check_status() {
-    # spoofdpi servisinin yüklü olup olmadığını kontrol et
+    # Servisin yüklü olup olmadığını kontrol et
     if launchctl list | grep -q "$SPOOFDPI_LABEL"; then
         echo "Aktif"
     else
