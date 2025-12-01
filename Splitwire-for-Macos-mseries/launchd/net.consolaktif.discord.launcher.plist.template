@@ -5,8 +5,7 @@
     <key>Label</key>
     <string>net.consolaktif.discord.launcher</string>
     
-    <!-- KRİTİK BÖLÜM: Ortam Değişkenleri Native Olarak Tanımlanıyor -->
-    <!-- Bu sayede Updater, Helper, GPU Process hepsi proxy'yi görür -->
+    <!-- İŞTE ÇÖZÜM BURASI: Update modülü bu değişkenleri okumak ZORUNDADIR -->
     <key>EnvironmentVariables</key>
     <dict>
         <key>http_proxy</key>
@@ -15,6 +14,7 @@
         <string>http://127.0.0.1:8080</string>
         <key>all_proxy</key>
         <string>http://127.0.0.1:8080</string>
+        <!-- Homebrew yolu -->
         <key>PATH</key>
         <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
     </dict>
@@ -24,16 +24,18 @@
         <string>/bin/zsh</string>
         <string>-c</string>
         <string>
-# Port 8080'in hazır olmasını bekle
-echo "Proxy (8080) bekleniyor..."
+# Port 8080 hazır olana kadar bekle
+echo "Launcher: Proxy bekleniyor..."
 DEADLINE=$((SECONDS+45))
 while ! nc -z 127.0.0.1 8080 2>/dev/null; do
   if [ $SECONDS -ge $DEADLINE ]; then break; fi
   sleep 0.5
 done
 
-# Discord'u en doğal haliyle başlat (Ekstra parametreye gerek kalmadı, yukarıdaki EnvVar yeterli)
-exec /Applications/Discord.app/Contents/MacOS/Discord
+# Discord'u başlat
+# --proxy-server parametresini yine de ekliyoruz (çift dikiş olsun)
+# --ignore-certificate-errors: Update sırasında SSL hatası almaması için şart
+exec /Applications/Discord.app/Contents/MacOS/Discord --proxy-server="http://127.0.0.1:8080" --ignore-certificate-errors
         </string>
     </array>
     <key>RunAtLoad</key>
