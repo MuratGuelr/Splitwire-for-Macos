@@ -1,51 +1,70 @@
 #!/usr/bin/env bash
-# Intel versiyonu - aynı basit kurulum
+# SplitWire - Intel macOS
 set -e
 
-echo "SplitWire Basit Kurulum (Intel)"
+echo "SplitWire Kurulum (Intel)"
+echo ""
 
+BREW=""
+[ -x "/usr/local/bin/brew" ] && BREW="/usr/local/bin/brew"
+[ -x "/opt/homebrew/bin/brew" ] && BREW="/opt/homebrew/bin/brew"
+[ -z "$BREW" ] && echo "Homebrew yok!" && exit 1
+
+eval "$($BREW shellenv)"
+command -v spoofdpi &>/dev/null || $BREW install spoofdpi
+[ ! -d "/Applications/Discord.app" ] && echo "Discord yok!" && exit 1
+
+DESKTOP="$HOME/Desktop"
+
+cat > "$DESKTOP/Discord Başlat.command" << 'S'
+#!/bin/bash
+clear
+echo "SplitWire - Discord Proxy ile Başlat"
+echo ""
 SPOOFDPI=""
 for p in /usr/local/bin/spoofdpi /opt/homebrew/bin/spoofdpi; do
     [ -x "$p" ] && SPOOFDPI="$p" && break
 done
+[ -z "$SPOOFDPI" ] && echo "spoofdpi yok!" && exit 1
 
-if [ -z "$SPOOFDPI" ]; then
-    echo "spoofdpi kuruluyor..."
-    BREW=""
-    [ -x "/usr/local/bin/brew" ] && BREW="/usr/local/bin/brew"
-    [ -x "/opt/homebrew/bin/brew" ] && BREW="/opt/homebrew/bin/brew"
-    [ -z "$BREW" ] && echo "Homebrew yok!" && exit 1
-    $BREW install spoofdpi
-    for p in /usr/local/bin/spoofdpi /opt/homebrew/bin/spoofdpi; do
-        [ -x "$p" ] && SPOOFDPI="$p" && break
-    done
-fi
+pkill -x spoofdpi 2>/dev/null; pkill -x Discord 2>/dev/null; sleep 1
+echo "→ spoofdpi başlatılıyor..."
+"$SPOOFDPI" --system-proxy &
+sleep 3
+echo "✓ Proxy aktif"
+echo "→ Discord başlatılıyor..."
+open -a Discord
+echo ""
+echo "Bu pencereyi AÇIK TUTUN."
+read -p "Çıkmak için Enter..."
+pkill -x spoofdpi 2>/dev/null
+echo "✓ Durduruldu"
+S
+chmod +x "$DESKTOP/Discord Başlat.command"
 
-echo "✓ spoofdpi: $SPOOFDPI"
-[ ! -d "/Applications/Discord.app" ] && echo "Discord yok!" && exit 1
-echo "✓ Discord.app"
-
-cat > "$HOME/Desktop/Discord (Proxy).command" << 'SCRIPT'
+cat > "$DESKTOP/Proxy Başlat.command" << 'S'
 #!/bin/bash
 SPOOFDPI=""
 for p in /usr/local/bin/spoofdpi /opt/homebrew/bin/spoofdpi; do
     [ -x "$p" ] && SPOOFDPI="$p" && break
 done
-[ -z "$SPOOFDPI" ] && osascript -e 'display alert "Hata" message "spoofdpi bulunamadı!"' && exit 1
-
 pkill -x spoofdpi 2>/dev/null; sleep 1
-"$SPOOFDPI" &
+"$SPOOFDPI" --system-proxy &
 sleep 2
-
-export http_proxy="http://127.0.0.1:8080" https_proxy="http://127.0.0.1:8080" all_proxy="http://127.0.0.1:8080"
-/Applications/Discord.app/Contents/MacOS/Discord --proxy-server="http://127.0.0.1:8080" &
-
-echo "✓ Discord proxy ile açıldı"
-read -p "Çıkmak için Enter..."
+echo "✓ Proxy aktif - Discord'u normal aç"
+read -p "Durdurmak için Enter..."
 pkill -x spoofdpi 2>/dev/null
-SCRIPT
+S
+chmod +x "$DESKTOP/Proxy Başlat.command"
 
-chmod +x "$HOME/Desktop/Discord (Proxy).command"
+cat > "$DESKTOP/Proxy Durdur.command" << 'S'
+#!/bin/bash
+pkill -x spoofdpi 2>/dev/null
+echo "✓ Durduruldu"
+sleep 1
+S
+chmod +x "$DESKTOP/Proxy Durdur.command"
+
 echo ""
-echo "✅ Masaüstünde 'Discord (Proxy).command' oluşturuldu."
-echo "   Çift tıklayarak Discord'u proxy ile açabilirsiniz."
+echo "✅ Kurulum tamamlandı!"
+echo "Masaüstündeki 'Discord Başlat' dosyasını kullanın."
