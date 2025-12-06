@@ -1,82 +1,94 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Diğer betiklerle uyumlu görsel fonksiyonlar
-GRN=$(tput setaf 2); YLW=$(tput setaf 3); RED=$(tput setaf 1); RST=$(tput sgr0)
+# Görsel fonksiyonlar
+GRN=$(tput setaf 2 2>/dev/null || echo "")
+YLW=$(tput setaf 3 2>/dev/null || echo "")
+RED=$(tput setaf 1 2>/dev/null || echo "")
+RST=$(tput sgr0 2>/dev/null || echo "")
+
 checkmark() { echo "${GRN}✔${RST} $*"; }
 warning() { echo "${YLW}⚠${RST} $*"; }
 error() { echo "${RED}✖${RST} $*"; }
-
-# Görsel yardımcılar (yalnızca çıktı, davranışı değiştirmez)
 hr() { printf "\n${YLW}────────────────────────────────────────────────────────${RST}\n"; }
 title() { hr; echo "${GRN}SplitWire • Discord Yükleyici (Apple Silicon)${RST}"; hr; }
 section() { printf "\n${YLW}▶${RST} %s\n" "$*"; }
 
-# Bu betiğin bulunduğu klasörü bul (install-homebrew.sh'e ulaşmak için)
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
 title
 
-# Sadece Apple Silicon (arm64) desteklenir
+# Mimari kontrolü - SADECE ARM64
 if [ "$(uname -m)" != "arm64" ]; then
-    error "Bu kurulum yalnızca Apple Silicon (arm64) içindir. Intel macOS desteklenmiyor."
+    error "Bu kurulum yalnızca Apple Silicon (M1/M2/M3/M4) içindir."
+    error "Intel Mac için 'Splitwire-for-Macos-intel' klasörünü kullanın."
     exit 1
 fi
 
-# 1. Nihai Kontrol: Uygulama gerçekten var mı?
-# Bizim için tek gerçek, dosyanın fiziksel olarak var olmasıdır.
+# Discord zaten kurulu mu kontrol et
 if [ -d "/Applications/Discord.app" ]; then
-    checkmark "Discord uygulaması /Applications klasöründe zaten mevcut."
-    exit 0
+    # Mimari kontrolü - ARM64 mi yoksa Intel mi?
+    DISCORD_ARCH=$(file /Applications/Discord.app/Contents/MacOS/Discord 2>/dev/null | grep -o 'arm64\|x86_64' | head -1)
+    
+    if [ "$DISCORD_ARCH" = "arm64" ]; then
+        checkmark "Discord (Apple Silicon) zaten kurulu."
+        exit 0
+    else
+        warning "Mevcut Discord Intel versiyonu! ARM64 versiyonu kuruluyor..."
+        rm -rf /Applications/Discord.app
+    fi
 fi
 
-# Eğer uygulama yoksa, kuruluma devam et
-warning "Discord uygulaması /Applications klasöründe bulunamadı."
-echo "Homebrew kullanılarak kurulum/onarım denenecek..."
+warning "Discord uygulaması bulunamadı veya yanlış mimari."
+echo "Apple Silicon (ARM64) versiyonu kuruluyor..."
 echo
 
-# 2. Homebrew Kontrolü ve Kurulumu (ARM /opt/homebrew)
+# Homebrew kontrolü - ARM Homebrew OLMALI
 section "Homebrew Kontrolü"
-if ! command -v brew >/dev/null 2>&1; then
-  warning "Homebrew bulunamadı, önce o kuruluyor…"
-  bash "$SCRIPT_DIR/install-homebrew.sh"
-  
-  # Homebrew'u mevcut terminal oturumuna tanıt
-  if [ -x "/opt/homebrew/bin/brew" ]; then
-    eval "$(/opt/homebrew/bin/brew shellenv)"
-  fi
-  checkmark "Homebrew başarıyla kuruldu."
-else
-  checkmark "Homebrew zaten kurulu."
+
+# ARM Homebrew path'i
+HOMEBREW_PATH="/opt/homebrew"
+
+if [ ! -x "$HOMEBREW_PATH/bin/brew" ]; then
+    warning "ARM Homebrew bulunamadı, kuruluyor..."
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 fi
 
-# ARM Homebrew doğrula
-if [ "$(brew --prefix 2>/dev/null || true)" != "/opt/homebrew" ]; then
-  error "Homebrew ARM prefix'te değil (/opt/homebrew). Terminal'i Rosetta olmadan açtığınızdan emin olun."
-  exit 1
+# ARM Homebrew'u aktif et
+eval "$($HOMEBREW_PATH/bin/brew shellenv)"
+
+# Doğrulama
+if [ "$(brew --prefix 2>/dev/null)" != "$HOMEBREW_PATH" ]; then
+    error "Homebrew ARM prefix'te değil!"
+    error "Terminal'i Rosetta olmadan açtığınızdan emin olun."
+    exit 1
 fi
 
-# 3. Discord Kurulumu/Yeniden Kurulumu
-echo
-section "Discord Kurulumu"
-warning "Discord, Homebrew ile /Applications klasörüne kuruluyor..."
+checkmark "Homebrew (ARM) hazır: $HOMEBREW_PATH"
+
+# Discord kurulumu
+section "Discord Kurulumu (ARM64)"
 echo "Bu işlem internet hızınıza bağlı olarak birkaç dakika sürebilir."
-
-# --- DEĞİŞİKLİK: `install` yerine `reinstall` kullanıyoruz. ---
-# Bu komut, Homebrew'un "zaten kurulu" demesini engeller ve
-# eksik dosyaları zorla yeniden yükler.
-brew reinstall --cask discord
-# --- DEĞİŞİKLİK BİTTİ ---
-
 echo
+
+# ARM Homebrew ile kur (Intel Homebrew değil!)
+"$HOMEBREW_PATH/bin/brew" reinstall --cask discord
+
+# Doğrulama
 section "Son Doğrulama"
-# 4. Son Doğrulama
+
 if [ -d "/Applications/Discord.app" ]; then
-    checkmark "Discord başarıyla kuruldu veya onarıldı!"
-    echo "Artık ana kuruluma './install.sh' komutu ile devam edebilirsiniz."
+    DISCORD_ARCH=$(file /Applications/Discord.app/Contents/MacOS/Discord 2>/dev/null | grep -o 'arm64\|x86_64' | head -1)
+    
+    if [ "$DISCORD_ARCH" = "arm64" ]; then
+        checkmark "Discord (Apple Silicon - ARM64) başarıyla kuruldu!"
+        echo "Artık './install.sh' ile SplitWire kurulumuna devam edebilirsiniz."
+    else
+        warning "Discord kuruldu ama Intel versiyonu görünüyor."
+        warning "Manuel olarak discord.com'dan ARM versiyonunu indirin."
+    fi
 else
-    error "HATA: Discord kurulumu tamamlanmasına rağmen uygulama /Applications klasöründe bulunamadı."
-    error "Lütfen Homebrew çıktısını kontrol edin veya Discord'u sitesinden elle kurmayı deneyin."
+    error "Discord kurulumu başarısız!"
     exit 1
 fi
 

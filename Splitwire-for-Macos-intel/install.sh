@@ -1,19 +1,9 @@
 #!/usr/bin/env bash
 # =============================================================================
-# SplitWire Kurulum Scripti (Intel)
-# =============================================================================
-# Bu script Discord'u spoofdpi proxy ile çalıştıran ayrı bir uygulama oluşturur.
-# Orijinal Discord.app'a HİÇ DOKUNMAZ.
-#
-# Kurulum sonrası:
-#   /Applications/Discord.app          → Orijinal (normal kullanım)
-#   /Applications/SplitWire Discord.app → Proxy ile açar (DPI bypass)
+# SplitWire Kurulum Scripti - Minimal Müdahale (Intel)
 # =============================================================================
 set -euo pipefail
 
-# ----------------------------------------------------------------------
-# RENKLER VE YARDIMCI FONKSİYONLAR
-# ----------------------------------------------------------------------
 GRN=$(tput setaf 2 2>/dev/null || echo "")
 YLW=$(tput setaf 3 2>/dev/null || echo "")
 RED=$(tput setaf 1 2>/dev/null || echo "")
@@ -23,112 +13,82 @@ checkmark() { echo "${GRN}✔${RST} $*"; }
 warning() { echo "${YLW}⚠${RST} $*"; }
 error() { echo "${RED}✖${RST} $*"; }
 hr() { printf "\n${YLW}────────────────────────────────────────────────────────${RST}\n"; }
-title() { hr; echo "${GRN}SplitWire • Kurulum (Intel)${RST}"; hr; }
+title() { hr; echo "${GRN}SplitWire • Minimal Kurulum (Intel)${RST}"; hr; }
 
 title
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-
-# Mimari kontrolü
-ARCH=$(uname -m)
-if [ "$ARCH" != "x86_64" ]; then
-    warning "Bu kurulum Intel Mac'ler içindir. M serisi için diğer klasörü kullanın."
-    read -p "Devam etmek istiyor musunuz? (e/H): " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Ee]$ ]]; then
-        exit 1
-    fi
-fi
-
 HOMEBREW_PATH="/usr/local"
+
+# M-serisi uyarısı
+if [ "$(uname -m)" = "arm64" ]; then
+    warning "Bu Mac Apple Silicon görünüyor. M-serisi klasörünü kullanmanız önerilir."
+    read -p "Devam? (e/H): " -n 1 -r
+    echo
+    [[ ! $REPLY =~ ^[Ee]$ ]] && exit 1
+fi
 
 # Klasörler
 APP_SUPPORT_DIR="$HOME/Library/Application Support/Consolaktif-Discord"
 LAUNCH_AGENTS_DIR="$HOME/Library/LaunchAgents"
 LOG_DIR="$HOME/Library/Logs/ConsolAktifSplitWireLog"
-
 mkdir -p "$APP_SUPPORT_DIR" "$LAUNCH_AGENTS_DIR" "$LOG_DIR"
 
-# ----------------------------------------------------------------------
-# BAĞIMLILIK KONTROLLERİ
-# ----------------------------------------------------------------------
+# Bağımlılıklar
 echo "Bağımlılıklar kontrol ediliyor..."
 
-# Homebrew
 if ! command -v brew >/dev/null 2>&1; then
     if [ -x "$HOMEBREW_PATH/bin/brew" ]; then
         eval "$($HOMEBREW_PATH/bin/brew shellenv)"
+    elif [ -x "/opt/homebrew/bin/brew" ]; then
+        eval "$(/opt/homebrew/bin/brew shellenv)"
     else
-        warning "Homebrew bulunamadı, kuruluyor..."
-        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-        eval "$($HOMEBREW_PATH/bin/brew shellenv)"
+        error "Homebrew bulunamadı!"
+        exit 1
     fi
 fi
-checkmark "Homebrew hazır"
 
-# spoofdpi
 if ! brew list spoofdpi &>/dev/null; then
     warning "spoofdpi kuruluyor..."
     brew install spoofdpi
 fi
+checkmark "spoofdpi hazır"
 
-SPOOFDPI_BIN=$(command -v spoofdpi 2>/dev/null || echo "$HOMEBREW_PATH/bin/spoofdpi")
-if [ ! -x "$SPOOFDPI_BIN" ]; then
-    error "spoofdpi bulunamadı!"
-    exit 1
-fi
-checkmark "spoofdpi hazır ($SPOOFDPI_BIN)"
+DISCORD_APP="/Applications/Discord.app"
+DISCORD_PLIST="$DISCORD_APP/Contents/Info.plist"
 
-# Discord kontrolü
-if [ ! -d "/Applications/Discord.app" ]; then
-    error "Discord.app bulunamadı! Önce Discord'u kurun."
+if [ ! -d "$DISCORD_APP" ]; then
+    error "Discord.app bulunamadı!"
     exit 1
 fi
 checkmark "Discord.app mevcut"
 
-# ----------------------------------------------------------------------
-# ESKİ KURULUMLARI TEMİZLE
-# ----------------------------------------------------------------------
+# Eski kurulumları temizle
 echo "Eski kurulumlar temizleniyor..."
 launchctl bootout gui/$(id -u)/net.consolaktif.discord.spoofdpi 2>/dev/null || true
 pkill -x spoofdpi 2>/dev/null || true
 
 if [ -d "/Applications/Discord_Original.app" ]; then
-    rm -rf "/Applications/Discord.app" 2>/dev/null || true
-    mv "/Applications/Discord_Original.app" "/Applications/Discord.app"
-    checkmark "Orijinal Discord geri yüklendi"
+    rm -rf "$DISCORD_APP"
+    mv "/Applications/Discord_Original.app" "$DISCORD_APP"
 fi
+rm -rf "/Applications/SplitWire Discord.app" 2>/dev/null || true
 
-# ----------------------------------------------------------------------
-# SPOOFDPI SERVİS SCRIPTI
-# ----------------------------------------------------------------------
+# spoofdpi servisi
 echo "Proxy servisi yapılandırılıyor..."
 
 cat > "$APP_SUPPORT_DIR/spoofdpi-service.sh" << 'EOF'
 #!/bin/bash
-SPOOF_BIN=""
 for path in "/usr/local/bin/spoofdpi" "/opt/homebrew/bin/spoofdpi"; do
     if [ -x "$path" ]; then
-        SPOOF_BIN="$path"
-        break
+        exec "$path" --listen-addr 127.0.0.1 --listen-port 8080 --enable-doh --window-size 0
     fi
 done
-
-if [ -z "$SPOOF_BIN" ]; then
-    echo "spoofdpi bulunamadı" >&2
-    exit 1
-fi
-
-exec "$SPOOF_BIN" --listen-addr 127.0.0.1 --listen-port 8080 --enable-doh --window-size 0
+exit 1
 EOF
 chmod +x "$APP_SUPPORT_DIR/spoofdpi-service.sh"
 
-# ----------------------------------------------------------------------
-# LAUNCHAGENT
-# ----------------------------------------------------------------------
-PLIST_FILE="$LAUNCH_AGENTS_DIR/net.consolaktif.discord.spoofdpi.plist"
-
-cat > "$PLIST_FILE" << EOF
+cat > "$LAUNCH_AGENTS_DIR/net.consolaktif.discord.spoofdpi.plist" << EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -153,130 +113,60 @@ cat > "$PLIST_FILE" << EOF
 </plist>
 EOF
 
-launchctl load -w "$PLIST_FILE"
+launchctl load -w "$LAUNCH_AGENTS_DIR/net.consolaktif.discord.spoofdpi.plist"
 sleep 2
+pgrep -x "spoofdpi" >/dev/null && checkmark "Proxy servisi çalışıyor" || warning "Proxy başlatılamadı"
 
-if pgrep -x "spoofdpi" >/dev/null; then
-    checkmark "Proxy servisi çalışıyor"
-else
-    warning "Proxy servisi başlatılamadı"
-fi
+# Discord LSEnvironment
+echo "Discord yapılandırılıyor..."
 
-# ----------------------------------------------------------------------
-# SPLITWIRE DISCORD UYGULAMASI
-# ----------------------------------------------------------------------
-echo "SplitWire Discord uygulaması oluşturuluyor..."
+BACKUP_PLIST="$APP_SUPPORT_DIR/Info.plist.backup"
+[ ! -f "$BACKUP_PLIST" ] && cp "$DISCORD_PLIST" "$BACKUP_PLIST"
 
-SPLITWIRE_APP="/Applications/SplitWire Discord.app"
-rm -rf "$SPLITWIRE_APP"
-mkdir -p "$SPLITWIRE_APP/Contents/MacOS"
-mkdir -p "$SPLITWIRE_APP/Contents/Resources"
+python3 << PYEOF
+import plistlib
 
-cat > "$SPLITWIRE_APP/Contents/Info.plist" << 'PLIST_EOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>CFBundleExecutable</key>
-    <string>SplitWire</string>
-    <key>CFBundleIconFile</key>
-    <string>AppIcon</string>
-    <key>CFBundleIdentifier</key>
-    <string>net.consolaktif.splitwire.discord</string>
-    <key>CFBundleName</key>
-    <string>SplitWire Discord</string>
-    <key>CFBundleDisplayName</key>
-    <string>SplitWire Discord</string>
-    <key>CFBundlePackageType</key>
-    <string>APPL</string>
-    <key>CFBundleShortVersionString</key>
-    <string>2.0</string>
-    <key>CFBundleVersion</key>
-    <string>2</string>
-    <key>LSMinimumSystemVersion</key>
-    <string>10.13</string>
-    <key>NSHighResolutionCapable</key>
-    <true/>
-</dict>
-</plist>
-PLIST_EOF
+with open("$DISCORD_PLIST", 'rb') as f:
+    plist = plistlib.load(f)
 
-cat > "$SPLITWIRE_APP/Contents/MacOS/SplitWire" << 'LAUNCHER_EOF'
-#!/bin/bash
-# SplitWire Discord Başlatıcı (Intel)
+plist['LSEnvironment'] = {
+    'http_proxy': 'http://127.0.0.1:8080',
+    'https_proxy': 'http://127.0.0.1:8080',
+    'HTTP_PROXY': 'http://127.0.0.1:8080',
+    'HTTPS_PROXY': 'http://127.0.0.1:8080',
+    'all_proxy': 'http://127.0.0.1:8080',
+    'ALL_PROXY': 'http://127.0.0.1:8080'
+}
 
-if pgrep -x "Discord" > /dev/null 2>&1; then
-    osascript -e 'tell application "Discord" to activate'
-    exit 0
-fi
+with open("$DISCORD_PLIST", 'wb') as f:
+    plistlib.dump(plist, f)
+PYEOF
 
-PROXY_READY=false
+codesign --force --deep --sign - "$DISCORD_APP" 2>/dev/null || xattr -cr "$DISCORD_APP"
+xattr -dr com.apple.quarantine "$DISCORD_APP" 2>/dev/null || true
 
-if nc -z 127.0.0.1 8080 2>/dev/null; then
-    PROXY_READY=true
-else
-    launchctl kickstart gui/$(id -u)/net.consolaktif.discord.spoofdpi 2>/dev/null || true
-    for i in 1 2 3 4 5; do
-        sleep 1
-        if nc -z 127.0.0.1 8080 2>/dev/null; then
-            PROXY_READY=true
-            break
-        fi
-    done
-fi
-
-DISCORD_APP="/Applications/Discord.app"
-
-if [ "$PROXY_READY" = true ]; then
-    export http_proxy="http://127.0.0.1:8080"
-    export https_proxy="http://127.0.0.1:8080"
-    "$DISCORD_APP/Contents/MacOS/Discord" --proxy-server="http://127.0.0.1:8080" &
-else
-    osascript -e 'display notification "Proxy hazır değil, normal başlatılıyor" with title "SplitWire"'
-    open -a Discord
-fi
-LAUNCHER_EOF
-
-chmod +x "$SPLITWIRE_APP/Contents/MacOS/SplitWire"
-
-DISCORD_ICON="/Applications/Discord.app/Contents/Resources/electron.icns"
-if [ -f "$DISCORD_ICON" ]; then
-    cp "$DISCORD_ICON" "$SPLITWIRE_APP/Contents/Resources/AppIcon.icns"
-fi
-
-xattr -cr "$SPLITWIRE_APP" 2>/dev/null || true
-
-checkmark "SplitWire Discord uygulaması oluşturuldu"
+checkmark "Discord yapılandırıldı"
 
 # Kontrol scripti
 cat > "$APP_SUPPORT_DIR/control.sh" << 'CTRL_EOF'
 #!/bin/bash
 case "${1:-}" in
-    start)
-        launchctl load -w ~/Library/LaunchAgents/net.consolaktif.discord.spoofdpi.plist 2>/dev/null
-        launchctl kickstart gui/$(id -u)/net.consolaktif.discord.spoofdpi 2>/dev/null
-        echo "Servis başlatıldı"
+    start) launchctl load -w ~/Library/LaunchAgents/net.consolaktif.discord.spoofdpi.plist 2>/dev/null; echo "Başlatıldı" ;;
+    stop) launchctl bootout gui/$(id -u)/net.consolaktif.discord.spoofdpi 2>/dev/null; pkill -x spoofdpi 2>/dev/null; echo "Durduruldu" ;;
+    status) pgrep -x "spoofdpi" >/dev/null && echo "Aktif" || echo "Pasif" ;;
+    restore)
+        B="$HOME/Library/Application Support/Consolaktif-Discord/Info.plist.backup"
+        [ -f "$B" ] && cp "$B" /Applications/Discord.app/Contents/Info.plist && codesign --force --deep --sign - /Applications/Discord.app 2>/dev/null && echo "Geri yüklendi"
         ;;
-    stop)
-        launchctl bootout gui/$(id -u)/net.consolaktif.discord.spoofdpi 2>/dev/null
-        pkill -x spoofdpi 2>/dev/null
-        echo "Servis durduruldu"
-        ;;
-    status)
-        if pgrep -x "spoofdpi" >/dev/null; then echo "Aktif"; else echo "Pasif"; fi
-        ;;
-    *) echo "Kullanım: $0 {start|stop|status}" ;;
+    *) echo "Kullanım: $0 {start|stop|status|restore}" ;;
 esac
 CTRL_EOF
 chmod +x "$APP_SUPPORT_DIR/control.sh"
 
 echo
 hr
-echo "${GRN}✅ KURULUM TAMAMLANDI! (Intel)${RST}"
+echo "${GRN}✅ KURULUM TAMAMLANDI!${RST}"
 hr
 echo
-echo "📋 ${YLW}KULLANIM:${RST}"
-echo "   → 'SplitWire Discord' uygulamasını Dock'a ekleyin"
-echo "   → Proxy ile açmak için 'SplitWire Discord' kullanın"
-echo "   → Normal Discord için 'Discord' kullanın"
+echo "🚀 Discord'u her zamanki gibi açın - otomatik proxy kullanacak!"
 echo
