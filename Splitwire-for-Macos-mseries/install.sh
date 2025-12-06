@@ -235,49 +235,48 @@ cat > "$WRAPPER_MACOS/Discord" << 'LAUNCHER_EOF'
 # =============================================================================
 # SplitWire Discord Başlatıcı
 # =============================================================================
-# Bu script Discord'u her zaman spoofdpi proxy üzerinden çalıştırır.
-# =============================================================================
 
-# Update Döngüsü Temizliği (Discord güncelleme hatalarını önler)
+# Update Döngüsü Temizliği
 rm -rf "$HOME/Library/Application Support/discord/pending" 2>/dev/null || true
 rm -rf "$HOME/Library/Application Support/discord/modules/pending" 2>/dev/null || true
 rm -rf "$HOME/Library/Caches/com.hnc.Discord.ShipIt" 2>/dev/null || true
-rm -rf "$HOME/Library/Caches/com.hnc.Discord/ShipIt_stderr.log" 2>/dev/null || true
-
-# Proxy Ayarları
-export http_proxy="http://127.0.0.1:8080"
-export https_proxy="http://127.0.0.1:8080"
-export all_proxy="http://127.0.0.1:8080"
-export HTTP_PROXY="http://127.0.0.1:8080"
-export HTTPS_PROXY="http://127.0.0.1:8080"
-export ALL_PROXY="http://127.0.0.1:8080"
 
 # PATH ayarı
 export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
 
-# spoofdpi çalışmıyorsa LaunchAgent'ı tetikle
-if ! pgrep -x "spoofdpi" > /dev/null 2>&1; then
-    launchctl kickstart -k gui/$(id -u)/net.consolaktif.discord.spoofdpi 2>/dev/null || true
-    
-    # Proxy hazır olana kadar bekle (maksimum 10 saniye)
-    WAIT_COUNT=0
-    while ! nc -z 127.0.0.1 8080 2>/dev/null; do
-        sleep 0.5
-        WAIT_COUNT=$((WAIT_COUNT + 1))
-        if [ $WAIT_COUNT -ge 20 ]; then
-            break
-        fi
-    done
-fi
-
-# Orijinal Discord'u proxy parametresiyle başlat
+# Orijinal Discord yolu
 ORIGINAL_APP="/Applications/Discord_Original.app"
-if [ -d "$ORIGINAL_APP" ]; then
-    exec "$ORIGINAL_APP/Contents/MacOS/Discord" --proxy-server="http://127.0.0.1:8080" "$@"
-else
+if [ ! -d "$ORIGINAL_APP" ]; then
     osascript -e 'display alert "Hata" message "Discord_Original.app bulunamadı. Lütfen SplitWire kurulumunu tekrar çalıştırın."'
     exit 1
 fi
+
+# spoofdpi çalışmıyorsa başlatmayı dene
+if ! pgrep -x "spoofdpi" > /dev/null 2>&1; then
+    launchctl kickstart gui/$(id -u)/net.consolaktif.discord.spoofdpi 2>/dev/null || true
+fi
+
+# Proxy hazır olana kadar bekle (maksimum 10 saniye)
+PROXY_READY=false
+for i in $(seq 1 10); do
+    if nc -z 127.0.0.1 8080 2>/dev/null; then
+        PROXY_READY=true
+        break
+    fi
+    sleep 1
+done
+
+# Proxy hazır değilse Discord'u AÇMA
+if [ "$PROXY_READY" != true ]; then
+    osascript -e 'display alert "SplitWire Hatası" message "spoofdpi proxy başlatılamadı. Discord açılamıyor.\n\nÇözüm için:\n1. SplitWire Kontrol panelinden servisi başlatın\n2. Veya Terminal'\''de: launchctl kickstart gui/$(id -u)/net.consolaktif.discord.spoofdpi" buttons {"Tamam"} default button "Tamam"'
+    exit 1
+fi
+
+# Proxy hazır - Discord'u proxy ile başlat
+export http_proxy="http://127.0.0.1:8080"
+export https_proxy="http://127.0.0.1:8080"
+export all_proxy="http://127.0.0.1:8080"
+exec "$ORIGINAL_APP/Contents/MacOS/Discord" --proxy-server="http://127.0.0.1:8080" "$@"
 LAUNCHER_EOF
 
 chmod +x "$WRAPPER_MACOS/Discord"

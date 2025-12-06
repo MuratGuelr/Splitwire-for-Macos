@@ -276,40 +276,50 @@ cat > "$WRAPPER_MACOS/Discord" << 'LAUNCHER_EOF'
 rm -rf "$HOME/Library/Application Support/discord/pending" 2>/dev/null || true
 rm -rf "$HOME/Library/Application Support/discord/modules/pending" 2>/dev/null || true
 rm -rf "$HOME/Library/Caches/com.hnc.Discord.ShipIt" 2>/dev/null || true
-rm -rf "$HOME/Library/Caches/com.hnc.Discord/ShipIt_stderr.log" 2>/dev/null || true
-
-# Proxy Ayarları
-export http_proxy="http://127.0.0.1:8080"
-export https_proxy="http://127.0.0.1:8080"
-export all_proxy="http://127.0.0.1:8080"
-export HTTP_PROXY="http://127.0.0.1:8080"
-export HTTPS_PROXY="http://127.0.0.1:8080"
-export ALL_PROXY="http://127.0.0.1:8080"
 
 # PATH ayarı (Intel: /usr/local öncelikli)
 export PATH="/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
 
-# spoofdpi çalışmıyorsa LaunchAgent'ı tetikle
-if ! pgrep -x "spoofdpi" > /dev/null 2>&1; then
-    launchctl kickstart -k gui/$(id -u)/net.consolaktif.discord.spoofdpi 2>/dev/null || true
+# Orijinal Discord yolu
+ORIGINAL_APP="/Applications/Discord_Original.app"
+if [ ! -d "$ORIGINAL_APP" ]; then
+    osascript -e 'display alert "Hata" message "Discord_Original.app bulunamadı."'
+    exit 1
+fi
+
+# Proxy kontrolü - port 8080 açık mı?
+PROXY_READY=false
+
+# Önce spoofdpi çalışıyor mu kontrol et
+if pgrep -x "spoofdpi" > /dev/null 2>&1; then
+    # Port kontrolü
+    if nc -z 127.0.0.1 8080 2>/dev/null; then
+        PROXY_READY=true
+    fi
+else
+    # spoofdpi çalışmıyorsa başlatmayı dene
+    launchctl kickstart gui/$(id -u)/net.consolaktif.discord.spoofdpi 2>/dev/null || true
     
-    WAIT_COUNT=0
-    while ! nc -z 127.0.0.1 8080 2>/dev/null; do
-        sleep 0.5
-        WAIT_COUNT=$((WAIT_COUNT + 1))
-        if [ $WAIT_COUNT -ge 20 ]; then
+    # Kısa bir süre bekle
+    for i in 1 2 3 4 5; do
+        sleep 1
+        if nc -z 127.0.0.1 8080 2>/dev/null; then
+            PROXY_READY=true
             break
         fi
     done
 fi
 
-# Orijinal Discord'u proxy parametresiyle başlat
-ORIGINAL_APP="/Applications/Discord_Original.app"
-if [ -d "$ORIGINAL_APP" ]; then
+# Discord'u başlat
+if [ "$PROXY_READY" = true ]; then
+    # Proxy hazır - proxy ile başlat
+    export http_proxy="http://127.0.0.1:8080"
+    export https_proxy="http://127.0.0.1:8080"
+    export all_proxy="http://127.0.0.1:8080"
     exec "$ORIGINAL_APP/Contents/MacOS/Discord" --proxy-server="http://127.0.0.1:8080" "$@"
 else
-    osascript -e 'display alert "Hata" message "Discord_Original.app bulunamadı. Lütfen SplitWire kurulumunu tekrar çalıştırın."'
-    exit 1
+    # Proxy hazır değil - normal başlat (kasma olmaz)
+    exec "$ORIGINAL_APP/Contents/MacOS/Discord" "$@"
 fi
 LAUNCHER_EOF
 
