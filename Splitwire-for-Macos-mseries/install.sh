@@ -2,11 +2,6 @@
 # =============================================================================
 # SplitWire Kurulum
 # =============================================================================
-# - spoofdpi'yi LaunchAgent ile otomatik başlatır
-# - Bilgisayar açıldığında otomatik çalışır
-# - Bozulursa otomatik yeniden başlar
-# - Tek dosya ile kontrol (Başlat/Durdur/Durum)
-# =============================================================================
 set -e
 
 echo ""
@@ -59,7 +54,7 @@ exec "$SPOOFDPI_PATH" --system-proxy 2>&1
 SCRIPT
 chmod +x "$SUPPORT_DIR/run-spoofdpi.sh"
 
-# --- LaunchAgent (otomatik başlatma + yeniden başlatma) ---
+# --- LaunchAgent ---
 cat > "$AGENTS_DIR/com.splitwire.spoofdpi.plist" << PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -87,122 +82,113 @@ PLIST
 launchctl load -w "$AGENTS_DIR/com.splitwire.spoofdpi.plist"
 sleep 2
 
-if pgrep -x spoofdpi > /dev/null; then
-    echo "✓ Servis çalışıyor"
-else
-    echo "! Servis başlatılamadı"
-fi
-
-# --- Kontrol Paneli (tek dosya) ---
+# --- Kontrol Paneli (macOS Native GUI) ---
 cat > "$HOME/Desktop/SplitWire.command" << 'PANEL'
 #!/bin/bash
 # =============================================================================
-#  SplitWire Kontrol Paneli
+#  SplitWire Kontrol Paneli - macOS Native GUI
 # =============================================================================
 
-clear
-
-while true; do
-    # Durum kontrol
+# Fonksiyonlar
+get_status() {
     if pgrep -x spoofdpi > /dev/null 2>&1; then
-        STATUS="✅ ÇALIŞIYOR"
-        PID=$(pgrep -x spoofdpi)
+        echo "✅ Çalışıyor (PID: $(pgrep -x spoofdpi))"
     else
-        STATUS="❌ DURDU"
-        PID="-"
+        echo "❌ Durdu"
     fi
+}
 
-    clear
-    echo ""
-    echo "═══════════════════════════════════════════════════════════"
-    echo "  SplitWire Kontrol Paneli"
-    echo "═══════════════════════════════════════════════════════════"
-    echo ""
-    echo "  Durum: $STATUS"
-    echo "  PID:   $PID"
-    echo ""
-    echo "───────────────────────────────────────────────────────────"
-    echo ""
-    echo "  [1] Başlat"
-    echo "  [2] Durdur"
-    echo "  [3] Yeniden Başlat"
-    echo "  [4] Discord Aç"
-    echo "  [5] Logları Göster"
-    echo "  [6] Çıkış"
-    echo ""
-    echo "───────────────────────────────────────────────────────────"
-    echo ""
-    read -p "  Seçiminiz (1-6): " choice
+show_notification() {
+    osascript -e "display notification \"$1\" with title \"SplitWire\" sound name \"Pop\""
+}
 
-    case $choice in
-        1)
-            echo ""
-            echo "  Başlatılıyor..."
-            launchctl load -w ~/Library/LaunchAgents/com.splitwire.spoofdpi.plist 2>/dev/null
-            launchctl kickstart gui/$(id -u)/com.splitwire.spoofdpi 2>/dev/null
-            sleep 2
-            ;;
-        2)
-            echo ""
-            echo "  Durduruluyor..."
-            launchctl bootout gui/$(id -u)/com.splitwire.spoofdpi 2>/dev/null
-            pkill -x spoofdpi 2>/dev/null
-            sleep 1
-            ;;
-        3)
-            echo ""
-            echo "  Yeniden başlatılıyor..."
-            launchctl bootout gui/$(id -u)/com.splitwire.spoofdpi 2>/dev/null
-            pkill -x spoofdpi 2>/dev/null
-            sleep 1
-            launchctl load -w ~/Library/LaunchAgents/com.splitwire.spoofdpi.plist 2>/dev/null
-            launchctl kickstart gui/$(id -u)/com.splitwire.spoofdpi 2>/dev/null
-            sleep 2
-            ;;
-        4)
-            echo ""
-            echo "  Discord açılıyor..."
-            open -a Discord
-            sleep 1
-            ;;
-        5)
-            echo ""
-            echo "  === LOGLAR ==="
-            echo ""
-            tail -20 ~/Library/Logs/SplitWire/spoofdpi.log 2>/dev/null || echo "  Log bulunamadı"
-            echo ""
-            read -p "  Devam için Enter..."
-            ;;
-        6)
-            echo ""
-            echo "  Çıkılıyor..."
-            exit 0
-            ;;
-        *)
-            ;;
+start_service() {
+    launchctl load -w ~/Library/LaunchAgents/com.splitwire.spoofdpi.plist 2>/dev/null
+    launchctl kickstart gui/$(id -u)/com.splitwire.spoofdpi 2>/dev/null
+    sleep 2
+    if pgrep -x spoofdpi > /dev/null; then
+        show_notification "Proxy servisi başlatıldı"
+    else
+        show_notification "Servis başlatılamadı!"
+    fi
+}
+
+stop_service() {
+    launchctl bootout gui/$(id -u)/com.splitwire.spoofdpi 2>/dev/null
+    pkill -x spoofdpi 2>/dev/null
+    sleep 1
+    show_notification "Proxy servisi durduruldu"
+}
+
+restart_service() {
+    stop_service
+    sleep 1
+    start_service
+}
+
+open_discord() {
+    open -a Discord
+    show_notification "Discord açıldı"
+}
+
+show_logs() {
+    LOG_FILE=~/Library/Logs/SplitWire/spoofdpi.log
+    if [ -f "$LOG_FILE" ]; then
+        osascript -e "
+            set logContent to do shell script \"tail -30 '$LOG_FILE' 2>/dev/null || echo 'Log boş'\"
+            display dialog logContent with title \"SplitWire Logları\" buttons {\"Tamam\"} default button 1 with icon note
+        " 2>/dev/null
+    else
+        osascript -e 'display alert "Log Bulunamadı" message "Henüz log dosyası oluşmamış."'
+    fi
+}
+
+# Ana Menü Döngüsü
+while true; do
+    STATUS=$(get_status)
+    
+    CHOICE=$(osascript -e "
+        set theChoice to button returned of (display dialog \"
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+               SplitWire Kontrol Paneli
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Durum: $STATUS
+
+Discord'u normal şekilde açabilirsiniz.
+Proxy otomatik olarak aktif.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\" with title \"SplitWire\" buttons {\"Çıkış\", \"Loglar\", \"Discord Aç\", \"Yeniden Başlat\", \"Durdur\", \"Başlat\"} default button \"Discord Aç\" with icon note)
+    " 2>/dev/null)
+    
+    case "$CHOICE" in
+        "Başlat") start_service ;;
+        "Durdur") stop_service ;;
+        "Yeniden Başlat") restart_service ;;
+        "Discord Aç") open_discord ;;
+        "Loglar") show_logs ;;
+        "Çıkış"|"") exit 0 ;;
     esac
 done
 PANEL
 chmod +x "$HOME/Desktop/SplitWire.command"
+
+# --- İkon ayarla (Discord ikonu) ---
+ICON_SOURCE="/Applications/Discord.app/Contents/Resources/electron.icns"
+if [ -f "$ICON_SOURCE" ]; then
+    # fileicon aracı varsa kullan, yoksa devam et
+    if command -v fileicon &>/dev/null; then
+        fileicon set "$HOME/Desktop/SplitWire.command" "$ICON_SOURCE" 2>/dev/null || true
+    fi
+fi
 
 echo ""
 echo "═══════════════════════════════════════════════════════════"
 echo "  ✅ KURULUM TAMAMLANDI"
 echo "═══════════════════════════════════════════════════════════"
 echo ""
-echo "  Özellikler:"
-echo "  ───────────"
-echo "  ✓ spoofdpi bilgisayar açıldığında otomatik başlar"
-echo "  ✓ Bozulursa otomatik yeniden başlar"
-echo "  ✓ Sistem proxy aktif - Discord normal açılabilir"
+echo "  Masaüstündeki 'SplitWire.command' dosyasını açın."
+echo "  Güzel bir macOS diyaloğu görünecek."
 echo ""
-echo "  Kontrol Paneli:"
-echo "  ────────────────"
-echo "  Masaüstündeki 'SplitWire.command' dosyasını açın"
-echo "  Buradan: Başlat / Durdur / Yeniden Başlat / Durum"
-echo ""
-echo "  Discord Kullanımı:"
-echo "  ──────────────────"
-echo "  Discord'u normal açın (Dock, Spotlight, Finder)"
-echo "  Otomatik olarak proxy üzerinden çalışır"
+echo "  Discord'u normal açabilirsiniz - otomatik proxy kullanır."
 echo ""

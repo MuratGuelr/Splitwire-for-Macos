@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
-# SplitWire Kurulum (Intel)
+# SplitWire Kurulum (Intel) - macOS Native GUI
 set -e
 
 echo "SplitWire Kurulum (Intel)"
-echo ""
 
 BREW=""
 [ -x "/usr/local/bin/brew" ] && BREW="/usr/local/bin/brew"
@@ -13,7 +12,7 @@ BREW=""
 eval "$($BREW shellenv)"
 command -v spoofdpi &>/dev/null || $BREW install spoofdpi
 SPOOFDPI_PATH=$(command -v spoofdpi)
-echo "✓ spoofdpi: $SPOOFDPI_PATH"
+echo "✓ spoofdpi"
 
 [ ! -d "/Applications/Discord.app" ] && echo "Discord yok!" && exit 1
 echo "✓ Discord"
@@ -57,35 +56,49 @@ PLIST
 
 launchctl load -w "$AGENTS_DIR/com.splitwire.spoofdpi.plist"
 sleep 2
-pgrep -x spoofdpi > /dev/null && echo "✓ Servis çalışıyor" || echo "! Servis başlatılamadı"
 
 cat > "$HOME/Desktop/SplitWire.command" << 'PANEL'
 #!/bin/bash
-clear
+get_status() {
+    pgrep -x spoofdpi > /dev/null 2>&1 && echo "✅ Çalışıyor (PID: $(pgrep -x spoofdpi))" || echo "❌ Durdu"
+}
+show_notification() {
+    osascript -e "display notification \"$1\" with title \"SplitWire\" sound name \"Pop\""
+}
+start_service() {
+    launchctl load -w ~/Library/LaunchAgents/com.splitwire.spoofdpi.plist 2>/dev/null
+    launchctl kickstart gui/$(id -u)/com.splitwire.spoofdpi 2>/dev/null
+    sleep 2
+    pgrep -x spoofdpi > /dev/null && show_notification "Başlatıldı" || show_notification "Başlatılamadı!"
+}
+stop_service() {
+    launchctl bootout gui/$(id -u)/com.splitwire.spoofdpi 2>/dev/null
+    pkill -x spoofdpi 2>/dev/null
+    sleep 1
+    show_notification "Durduruldu"
+}
+restart_service() { stop_service; sleep 1; start_service; }
+open_discord() { open -a Discord; show_notification "Discord açıldı"; }
+show_logs() {
+    LOG=~/Library/Logs/SplitWire/spoofdpi.log
+    [ -f "$LOG" ] && osascript -e "display dialog \"$(tail -30 $LOG 2>/dev/null)\" with title \"Loglar\" buttons {\"Tamam\"}" || osascript -e 'display alert "Log yok"'
+}
+
 while true; do
-    if pgrep -x spoofdpi > /dev/null 2>&1; then
-        STATUS="✅ ÇALIŞIYOR"; PID=$(pgrep -x spoofdpi)
-    else
-        STATUS="❌ DURDU"; PID="-"
-    fi
-    clear
-    echo ""
-    echo "══════════════════════════════════════════"
-    echo "  SplitWire Kontrol Paneli"
-    echo "══════════════════════════════════════════"
-    echo "  Durum: $STATUS  (PID: $PID)"
-    echo "──────────────────────────────────────────"
-    echo "  [1] Başlat  [2] Durdur  [3] Yeniden Başlat"
-    echo "  [4] Discord Aç  [5] Loglar  [6] Çıkış"
-    echo "──────────────────────────────────────────"
-    read -p "  Seçim: " c
-    case $c in
-        1) launchctl load -w ~/Library/LaunchAgents/com.splitwire.spoofdpi.plist 2>/dev/null; launchctl kickstart gui/$(id -u)/com.splitwire.spoofdpi 2>/dev/null; sleep 2;;
-        2) launchctl bootout gui/$(id -u)/com.splitwire.spoofdpi 2>/dev/null; pkill -x spoofdpi 2>/dev/null; sleep 1;;
-        3) launchctl bootout gui/$(id -u)/com.splitwire.spoofdpi 2>/dev/null; pkill -x spoofdpi 2>/dev/null; sleep 1; launchctl load -w ~/Library/LaunchAgents/com.splitwire.spoofdpi.plist 2>/dev/null; sleep 2;;
-        4) open -a Discord;;
-        5) echo ""; tail -20 ~/Library/Logs/SplitWire/spoofdpi.log 2>/dev/null; read -p "Enter...";;
-        6) exit 0;;
+    STATUS=$(get_status)
+    CHOICE=$(osascript -e "
+        button returned of (display dialog \"
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          SplitWire Kontrol Paneli
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Durum: $STATUS
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\" with title \"SplitWire\" buttons {\"Çıkış\", \"Loglar\", \"Discord Aç\", \"Yeniden Başlat\", \"Durdur\", \"Başlat\"} default button \"Discord Aç\" with icon note)
+    " 2>/dev/null)
+    case "$CHOICE" in
+        "Başlat") start_service;; "Durdur") stop_service;; "Yeniden Başlat") restart_service;;
+        "Discord Aç") open_discord;; "Loglar") show_logs;; *) exit 0;;
     esac
 done
 PANEL
@@ -93,5 +106,4 @@ chmod +x "$HOME/Desktop/SplitWire.command"
 
 echo ""
 echo "✅ Kurulum tamamlandı!"
-echo "Masaüstündeki 'SplitWire.command' ile kontrol edebilirsiniz."
-echo "Discord'u normal açabilirsiniz - otomatik proxy kullanır."
+echo "Masaüstündeki 'SplitWire.command' ile kontrol edin."
