@@ -61,10 +61,35 @@ launchctl load -w "$AGENTS_DIR/com.splitwire.spoofdpi.plist"
 sleep 2
 pgrep -x spoofdpi > /dev/null && echo "✓ Servis çalışıyor" || echo "! Servis başlatılamadı"
 
-cp "$SCRIPT_DIR/scripts/SplitWire Kontrol.command" "$SUPPORT_DIR/"
-chmod +x "$SUPPORT_DIR/SplitWire Kontrol.command"
+# Kontrol paneli
+KONTROL_FILE="$SUPPORT_DIR/SplitWire Kontrol.command"
+cp "$SCRIPT_DIR/scripts/SplitWire Kontrol.command" "$KONTROL_FILE"
+chmod +x "$KONTROL_FILE"
+xattr -cr "$KONTROL_FILE" 2>/dev/null || true
 
-ln -sf "$SUPPORT_DIR/SplitWire Kontrol.command" "$HOME/Desktop/SplitWire Kontrol"
+DESKTOP_FILE="$HOME/Desktop/SplitWire Kontrol.command"
+cp "$KONTROL_FILE" "$DESKTOP_FILE"
+chmod +x "$DESKTOP_FILE"
+xattr -cr "$DESKTOP_FILE" 2>/dev/null || true
+
+echo "✓ Kontrol paneli oluşturuldu"
+
+# Simge ayarla
+ICON_SOURCE="/Applications/Discord.app/Contents/Resources/electron.icns"
+if [ -f "$ICON_SOURCE" ]; then
+    python3 << PYEOF
+import Cocoa
+try:
+    image = Cocoa.NSImage.alloc().initWithContentsOfFile_("$ICON_SOURCE")
+    if image:
+        Cocoa.NSWorkspace.sharedWorkspace().setIcon_forFile_options_(image, "$DESKTOP_FILE", 0)
+        print("  ✓ Simge ayarlandı")
+except: pass
+PYEOF
+fi
+
+touch "$DESKTOP_FILE"
+killall Finder 2>/dev/null || true
 
 echo ""
 echo "✅ Kurulum tamamlandı!"

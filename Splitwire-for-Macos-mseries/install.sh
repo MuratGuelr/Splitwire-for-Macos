@@ -87,45 +87,55 @@ sleep 2
 if pgrep -x spoofdpi > /dev/null; then
     echo "✓ Servis çalışıyor"
 else
-    echo "! Servis başlatılamadı (log: $LOG_DIR/spoofdpi.log)"
+    echo "! Servis başlatılamadı"
 fi
 
-# --- Kontrol Paneli'ni SUPPORT_DIR'e kopyala ---
-cp "$SCRIPT_DIR/scripts/SplitWire Kontrol.command" "$SUPPORT_DIR/"
-chmod +x "$SUPPORT_DIR/SplitWire Kontrol.command"
+# --- Kontrol Paneli'ni kopyala ---
+KONTROL_FILE="$SUPPORT_DIR/SplitWire Kontrol.command"
+cp "$SCRIPT_DIR/scripts/SplitWire Kontrol.command" "$KONTROL_FILE"
+chmod +x "$KONTROL_FILE"
 
-# --- Masaüstüne sembolik link oluştur ---
-DESKTOP_LINK="$HOME/Desktop/SplitWire Kontrol"
-rm -f "$DESKTOP_LINK" 2>/dev/null
-ln -sf "$SUPPORT_DIR/SplitWire Kontrol.command" "$DESKTOP_LINK"
+# --- İZİN SORUNUNU ÇÖZMEK İÇİN ---
+# Quarantine attribute'unu kaldır (izin sorunu gider)
+xattr -cr "$KONTROL_FILE" 2>/dev/null || true
+xattr -d com.apple.quarantine "$KONTROL_FILE" 2>/dev/null || true
 
-# --- İkon ayarla (Swift ile) ---
-set_icon() {
-    local icon_path="$1"
-    local target_file="$2"
-    
-    [ ! -f "$icon_path" ] && return 0
-    [ ! -e "$target_file" ] && return 0
+# --- Masaüstü kısayolu ---
+DESKTOP_FILE="$HOME/Desktop/SplitWire Kontrol.command"
+cp "$KONTROL_FILE" "$DESKTOP_FILE"
+chmod +x "$DESKTOP_FILE"
+xattr -cr "$DESKTOP_FILE" 2>/dev/null || true
+xattr -d com.apple.quarantine "$DESKTOP_FILE" 2>/dev/null || true
 
-    cat > /tmp/seticon.swift << 'SWIFT'
+echo "✓ Kontrol paneli oluşturuldu"
+
+# --- DISCORD SİMGESİ AYARLA ---
+echo "→ Discord simgesi ayarlanıyor..."
+
+ICON_SOURCE="/Applications/Discord.app/Contents/Resources/electron.icns"
+
+if [ -f "$ICON_SOURCE" ]; then
+    # Python ile simge ayarla (daha güvenilir)
+    python3 << PYEOF
 import Cocoa
-let args = CommandLine.arguments
-guard args.count == 3 else { exit(1) }
-if let image = NSImage(contentsOfFile: args[1]) {
-    NSWorkspace.shared.setIcon(image, forFile: args[2], options: [])
-}
-SWIFT
-    swift /tmp/seticon.swift "$icon_path" "$target_file" 2>/dev/null || true
-    rm -f /tmp/seticon.swift
-    touch "$target_file" 2>/dev/null || true
-}
+import os
 
-DISCORD_ICON="/Applications/Discord.app/Contents/Resources/electron.icns"
-if [ -f "$DISCORD_ICON" ]; then
-    echo "→ İkon ayarlanıyor..."
-    set_icon "$DISCORD_ICON" "$DESKTOP_LINK"
-    set_icon "$DISCORD_ICON" "$SUPPORT_DIR/SplitWire Kontrol.command"
+icon_path = "$ICON_SOURCE"
+target_path = "$DESKTOP_FILE"
+
+try:
+    image = Cocoa.NSImage.alloc().initWithContentsOfFile_(icon_path)
+    if image:
+        Cocoa.NSWorkspace.sharedWorkspace().setIcon_forFile_options_(image, target_path, 0)
+        print("  ✓ Simge ayarlandı")
+except Exception as e:
+    print(f"  ! Simge ayarlanamadı: {e}")
+PYEOF
 fi
+
+# Finder'ı yenile (simgenin görünmesi için)
+touch "$DESKTOP_FILE"
+killall Finder 2>/dev/null || true
 
 echo ""
 echo "═══════════════════════════════════════════════════════════"
@@ -140,14 +150,10 @@ echo "  ✓ Sistem proxy aktif - Discord normal açılabilir"
 echo ""
 echo "  Kontrol Paneli:"
 echo "  ────────────────"
-echo "  Masaüstündeki 'SplitWire Kontrol' dosyasını açın"
-echo "  Güzel bir macOS diyaloğu görünecek:"
-echo "  • Başlat / Durdur / Yeniden Başlat"
-echo "  • Sistem Bilgisi"
-echo "  • Bildirimler"
+echo "  Masaüstündeki 'SplitWire Kontrol' dosyasına çift tıklayın"
+echo "  (Discord simgesi ile görünecek)"
 echo ""
 echo "  Discord Kullanımı:"
 echo "  ──────────────────"
-echo "  Discord'u normal açın (Dock, Spotlight, Finder)"
-echo "  Otomatik olarak proxy üzerinden çalışır"
+echo "  Discord'u normal açın - otomatik proxy kullanır"
 echo ""
