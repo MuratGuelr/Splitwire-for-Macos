@@ -145,23 +145,30 @@ fi
 # DISCORD INFO.PLIST YAPILANDIRMASI (LSEnvironment)
 # ----------------------------------------------------------------------
 echo "Discord yapılandırılıyor..."
+echo "${YLW}Şifreniz istenecek (Discord dosyalarını değiştirmek için):${RST}"
+
+# sudo yetkisi al
+sudo -v
 
 # Orijinal plist'i yedekle
 BACKUP_PLIST="$APP_SUPPORT_DIR/Info.plist.backup"
 if [ ! -f "$BACKUP_PLIST" ]; then
-    cp "$DISCORD_PLIST" "$BACKUP_PLIST"
+    sudo cp "$DISCORD_PLIST" "$BACKUP_PLIST"
+    sudo chown $(whoami) "$BACKUP_PLIST"
     checkmark "Orijinal Info.plist yedeklendi"
 fi
 
 # LSEnvironment ekle/güncelle
 echo "  -> LSEnvironment ekleniyor..."
 
-# Python ile plist düzenle (plutil yerine daha güvenilir)
+# Geçici dosyaya yaz, sonra sudo ile kopyala
+TEMP_PLIST="/tmp/discord_info_plist_temp.plist"
+
 python3 << PYEOF
 import plistlib
-import os
 
 plist_path = "$DISCORD_PLIST"
+temp_path = "$TEMP_PLIST"
 
 with open(plist_path, 'rb') as f:
     plist = plistlib.load(f)
@@ -176,21 +183,24 @@ plist['LSEnvironment'] = {
     'ALL_PROXY': 'http://127.0.0.1:8080'
 }
 
-with open(plist_path, 'wb') as f:
+with open(temp_path, 'wb') as f:
     plistlib.dump(plist, f)
-
-print("  -> LSEnvironment eklendi")
 PYEOF
 
+# sudo ile kopyala
+sudo cp "$TEMP_PLIST" "$DISCORD_PLIST"
+rm -f "$TEMP_PLIST"
+echo "  -> LSEnvironment eklendi"
+
 # Uygulamayı yeniden imzala (macOS 26 için gerekli)
-echo "  -> Uygulama imzalanıyor (macOS 26 için gerekli)..."
-codesign --force --deep --sign - "$DISCORD_APP" 2>/dev/null || {
+echo "  -> Uygulama imzalanıyor..."
+sudo codesign --force --deep --sign - "$DISCORD_APP" 2>/dev/null || {
     warning "Ad-hoc imzalama başarısız, alternatif yöntem deneniyor..."
-    xattr -cr "$DISCORD_APP"
+    sudo xattr -cr "$DISCORD_APP"
 }
 
 # Quarantine attribute'u kaldır
-xattr -dr com.apple.quarantine "$DISCORD_APP" 2>/dev/null || true
+sudo xattr -dr com.apple.quarantine "$DISCORD_APP" 2>/dev/null || true
 
 # LaunchServices cache'i temizle
 /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -kill -r -domain local -domain system -domain user 2>/dev/null || true

@@ -119,9 +119,16 @@ pgrep -x "spoofdpi" >/dev/null && checkmark "Proxy servisi çalışıyor" || war
 
 # Discord LSEnvironment
 echo "Discord yapılandırılıyor..."
+echo "${YLW}Şifreniz istenecek (Discord dosyalarını değiştirmek için):${RST}"
+sudo -v
 
 BACKUP_PLIST="$APP_SUPPORT_DIR/Info.plist.backup"
-[ ! -f "$BACKUP_PLIST" ] && cp "$DISCORD_PLIST" "$BACKUP_PLIST"
+if [ ! -f "$BACKUP_PLIST" ]; then
+    sudo cp "$DISCORD_PLIST" "$BACKUP_PLIST"
+    sudo chown $(whoami) "$BACKUP_PLIST"
+fi
+
+TEMP_PLIST="/tmp/discord_info_plist_temp.plist"
 
 python3 << PYEOF
 import plistlib
@@ -138,12 +145,15 @@ plist['LSEnvironment'] = {
     'ALL_PROXY': 'http://127.0.0.1:8080'
 }
 
-with open("$DISCORD_PLIST", 'wb') as f:
+with open("$TEMP_PLIST", 'wb') as f:
     plistlib.dump(plist, f)
 PYEOF
 
-codesign --force --deep --sign - "$DISCORD_APP" 2>/dev/null || xattr -cr "$DISCORD_APP"
-xattr -dr com.apple.quarantine "$DISCORD_APP" 2>/dev/null || true
+sudo cp "$TEMP_PLIST" "$DISCORD_PLIST"
+rm -f "$TEMP_PLIST"
+
+sudo codesign --force --deep --sign - "$DISCORD_APP" 2>/dev/null || sudo xattr -cr "$DISCORD_APP"
+sudo xattr -dr com.apple.quarantine "$DISCORD_APP" 2>/dev/null || true
 
 checkmark "Discord yapılandırıldı"
 
