@@ -2,11 +2,9 @@
 # =============================================================================
 # SplitWire - SpoofDPI Servis Başlatıcı
 # =============================================================================
-set -euo pipefail
 
 # Sinyal yakalama - graceful shutdown
 cleanup() {
-    pkill -x spoofdpi 2>/dev/null || true
     exit 0
 }
 trap cleanup SIGTERM SIGINT SIGHUP
@@ -30,6 +28,7 @@ find_spoofdpi() {
 SPOOF_BIN=$(find_spoofdpi)
 if [ -z "${SPOOF_BIN}" ] || [ ! -x "${SPOOF_BIN}" ]; then
     echo "HATA: spoofdpi bulunamadı." >&2
+    sleep 10  # Hata durumunda biraz bekle, döngüyü önle
     exit 1
 fi
 
@@ -41,15 +40,11 @@ mkdir -p "$LOG_DIR"
 LISTEN_PORT="${SPOOFDPI_PORT:-8080}"
 LISTEN_ADDR="127.0.0.1"
 
-# Eski süreçleri temizle
-pkill -x spoofdpi 2>/dev/null || true
-sleep 1
-
 echo "[$(date)] SpoofDPI Başlatılıyor..."
 echo "  -> Binary: $SPOOF_BIN"
 echo "  -> Adres: $LISTEN_ADDR:$LISTEN_PORT"
 
-# spoofdpi'yi foreground'da çalıştır
+# spoofdpi'yi foreground'da çalıştır (exec ile process'i değiştir)
 exec "$SPOOF_BIN" \
     --listen-addr "$LISTEN_ADDR" \
     --listen-port "$LISTEN_PORT" \
