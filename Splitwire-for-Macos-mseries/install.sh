@@ -10,6 +10,8 @@ echo "  SplitWire Kurulum"
 echo "═══════════════════════════════════════════════════════════"
 echo ""
 
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+
 # --- Homebrew ---
 BREW=""
 [ -x "/opt/homebrew/bin/brew" ] && BREW="/opt/homebrew/bin/brew"
@@ -82,104 +84,47 @@ PLIST
 launchctl load -w "$AGENTS_DIR/com.splitwire.spoofdpi.plist"
 sleep 2
 
-# --- Kontrol Paneli (macOS Native GUI) ---
-cat > "$HOME/Desktop/SplitWire.command" << 'PANEL'
-#!/bin/bash
-# =============================================================================
-#  SplitWire Kontrol Paneli - macOS Native GUI
-# =============================================================================
+if pgrep -x spoofdpi > /dev/null; then
+    echo "✓ Servis çalışıyor"
+else
+    echo "! Servis başlatılamadı (log: $LOG_DIR/spoofdpi.log)"
+fi
 
-# Fonksiyonlar
-get_status() {
-    if pgrep -x spoofdpi > /dev/null 2>&1; then
-        echo "✅ Çalışıyor (PID: $(pgrep -x spoofdpi))"
-    else
-        echo "❌ Durdu"
-    fi
-}
+# --- Kontrol Paneli'ni SUPPORT_DIR'e kopyala ---
+cp "$SCRIPT_DIR/scripts/SplitWire Kontrol.command" "$SUPPORT_DIR/"
+chmod +x "$SUPPORT_DIR/SplitWire Kontrol.command"
 
-show_notification() {
-    osascript -e "display notification \"$1\" with title \"SplitWire\" sound name \"Pop\""
-}
+# --- Masaüstüne sembolik link oluştur ---
+DESKTOP_LINK="$HOME/Desktop/SplitWire Kontrol"
+rm -f "$DESKTOP_LINK" 2>/dev/null
+ln -sf "$SUPPORT_DIR/SplitWire Kontrol.command" "$DESKTOP_LINK"
 
-start_service() {
-    launchctl load -w ~/Library/LaunchAgents/com.splitwire.spoofdpi.plist 2>/dev/null
-    launchctl kickstart gui/$(id -u)/com.splitwire.spoofdpi 2>/dev/null
-    sleep 2
-    if pgrep -x spoofdpi > /dev/null; then
-        show_notification "Proxy servisi başlatıldı"
-    else
-        show_notification "Servis başlatılamadı!"
-    fi
-}
-
-stop_service() {
-    launchctl bootout gui/$(id -u)/com.splitwire.spoofdpi 2>/dev/null
-    pkill -x spoofdpi 2>/dev/null
-    sleep 1
-    show_notification "Proxy servisi durduruldu"
-}
-
-restart_service() {
-    stop_service
-    sleep 1
-    start_service
-}
-
-open_discord() {
-    open -a Discord
-    show_notification "Discord açıldı"
-}
-
-show_logs() {
-    LOG_FILE=~/Library/Logs/SplitWire/spoofdpi.log
-    if [ -f "$LOG_FILE" ]; then
-        osascript -e "
-            set logContent to do shell script \"tail -30 '$LOG_FILE' 2>/dev/null || echo 'Log boş'\"
-            display dialog logContent with title \"SplitWire Logları\" buttons {\"Tamam\"} default button 1 with icon note
-        " 2>/dev/null
-    else
-        osascript -e 'display alert "Log Bulunamadı" message "Henüz log dosyası oluşmamış."'
-    fi
-}
-
-# Ana Menü Döngüsü
-while true; do
-    STATUS=$(get_status)
+# --- İkon ayarla (Swift ile) ---
+set_icon() {
+    local icon_path="$1"
+    local target_file="$2"
     
-    CHOICE=$(osascript -e "
-        set theChoice to button returned of (display dialog \"
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-               SplitWire Kontrol Paneli
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    [ ! -f "$icon_path" ] && return 0
+    [ ! -e "$target_file" ] && return 0
 
-Durum: $STATUS
+    cat > /tmp/seticon.swift << 'SWIFT'
+import Cocoa
+let args = CommandLine.arguments
+guard args.count == 3 else { exit(1) }
+if let image = NSImage(contentsOfFile: args[1]) {
+    NSWorkspace.shared.setIcon(image, forFile: args[2], options: [])
+}
+SWIFT
+    swift /tmp/seticon.swift "$icon_path" "$target_file" 2>/dev/null || true
+    rm -f /tmp/seticon.swift
+    touch "$target_file" 2>/dev/null || true
+}
 
-Discord'u normal şekilde açabilirsiniz.
-Proxy otomatik olarak aktif.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\" with title \"SplitWire\" buttons {\"Çıkış\", \"Loglar\", \"Discord Aç\", \"Yeniden Başlat\", \"Durdur\", \"Başlat\"} default button \"Discord Aç\" with icon note)
-    " 2>/dev/null)
-    
-    case "$CHOICE" in
-        "Başlat") start_service ;;
-        "Durdur") stop_service ;;
-        "Yeniden Başlat") restart_service ;;
-        "Discord Aç") open_discord ;;
-        "Loglar") show_logs ;;
-        "Çıkış"|"") exit 0 ;;
-    esac
-done
-PANEL
-chmod +x "$HOME/Desktop/SplitWire.command"
-
-# --- İkon ayarla (Discord ikonu) ---
-ICON_SOURCE="/Applications/Discord.app/Contents/Resources/electron.icns"
-if [ -f "$ICON_SOURCE" ]; then
-    # fileicon aracı varsa kullan, yoksa devam et
-    if command -v fileicon &>/dev/null; then
-        fileicon set "$HOME/Desktop/SplitWire.command" "$ICON_SOURCE" 2>/dev/null || true
-    fi
+DISCORD_ICON="/Applications/Discord.app/Contents/Resources/electron.icns"
+if [ -f "$DISCORD_ICON" ]; then
+    echo "→ İkon ayarlanıyor..."
+    set_icon "$DISCORD_ICON" "$DESKTOP_LINK"
+    set_icon "$DISCORD_ICON" "$SUPPORT_DIR/SplitWire Kontrol.command"
 fi
 
 echo ""
@@ -187,8 +132,22 @@ echo "════════════════════════�
 echo "  ✅ KURULUM TAMAMLANDI"
 echo "═══════════════════════════════════════════════════════════"
 echo ""
-echo "  Masaüstündeki 'SplitWire.command' dosyasını açın."
-echo "  Güzel bir macOS diyaloğu görünecek."
+echo "  Özellikler:"
+echo "  ───────────"
+echo "  ✓ spoofdpi bilgisayar açıldığında otomatik başlar"
+echo "  ✓ Bozulursa otomatik yeniden başlar"
+echo "  ✓ Sistem proxy aktif - Discord normal açılabilir"
 echo ""
-echo "  Discord'u normal açabilirsiniz - otomatik proxy kullanır."
+echo "  Kontrol Paneli:"
+echo "  ────────────────"
+echo "  Masaüstündeki 'SplitWire Kontrol' dosyasını açın"
+echo "  Güzel bir macOS diyaloğu görünecek:"
+echo "  • Başlat / Durdur / Yeniden Başlat"
+echo "  • Sistem Bilgisi"
+echo "  • Bildirimler"
+echo ""
+echo "  Discord Kullanımı:"
+echo "  ──────────────────"
+echo "  Discord'u normal açın (Dock, Spotlight, Finder)"
+echo "  Otomatik olarak proxy üzerinden çalışır"
 echo ""
