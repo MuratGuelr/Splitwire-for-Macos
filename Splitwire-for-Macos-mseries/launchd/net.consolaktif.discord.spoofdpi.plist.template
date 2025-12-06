@@ -4,29 +4,63 @@
 <dict>
     <key>Label</key>
     <string>net.consolaktif.discord.spoofdpi</string>
+    
     <key>ProgramArguments</key>
     <array>
         <string>__USER_HOME__/Library/Application Support/Consolaktif-Discord/discord-spoofdpi.sh</string>
     </array>
+    
+    <!-- Sistem açılışında otomatik başlat -->
     <key>RunAtLoad</key>
     <true/>
+    
+    <!-- Her durumda çalışır tut - macOS 26 için geliştirilmiş KeepAlive -->
     <key>KeepAlive</key>
     <dict>
+        <!-- Başarısız çıkışlarda yeniden başlat -->
         <key>SuccessfulExit</key>
         <false/>
+        <!-- Crash durumunda yeniden başlat -->
         <key>Crashed</key>
         <true/>
+        <!-- Her zaman çalışır tut (bu en önemli ayar) -->
+        <key>AfterInitialDemand</key>
+        <true/>
     </dict>
+    
+    <!-- Throttle ayarı - yeniden başlatma arasında minimum 3 saniye bekle -->
+    <key>ThrottleInterval</key>
+    <integer>3</integer>
+    
+    <!-- Çıkış timeout'u -->
+    <key>ExitTimeOut</key>
+    <integer>10</integer>
+    
+    <!-- Log dosyaları -->
     <key>StandardOutPath</key>
     <string>__USER_HOME__/Library/Logs/ConsolAktifSplitWireLog/net.consolaktif.discord.spoofdpi.out.log</string>
     <key>StandardErrorPath</key>
     <string>__USER_HOME__/Library/Logs/ConsolAktifSplitWireLog/net.consolaktif.discord.spoofdpi.err.log</string>
+    
+    <!-- Ortam değişkenleri -->
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
         <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>HOME</key>
+        <string>__USER_HOME__</string>
     </dict>
+    
+    <!-- İşlem tipi -->
     <key>ProcessType</key>
-    <string>Interactive</string>
+    <string>Background</string>
+    
+    <!-- macOS 26 uyumu için LowPriorityIO -->
+    <key>LowPriorityIO</key>
+    <false/>
+    
+    <!-- Başlatma anında çalışma dizini -->
+    <key>WorkingDirectory</key>
+    <string>__USER_HOME__/Library/Application Support/Consolaktif-Discord</string>
 </dict>
 </plist>
