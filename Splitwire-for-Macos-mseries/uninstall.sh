@@ -1,39 +1,50 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -e
 
-GRN=$'\e[32m'; YLW=$'\e[33m'; RED=$'\e[31m'; RST=$'\e[0m'
-line() { echo "${YLW}────────────────────────────────────────────────────────${RST}"; }
-
-echo
-line
-echo "${RED}SplitWire Kaldırma${RST}"
-line
-echo
+echo ""
+echo "SplitWire Kaldırma"
+echo "──────────────────"
+echo ""
 
 read -p "SplitWire'ı kaldırmak istiyor musunuz? (y/N): " c
-[[ ! "$c" =~ ^[Yy]$ ]] && echo "İptal." && exit 0
+if [[ ! "$c" =~ ^[Yy]$ ]]; then
+    echo "İptal edildi."
+    exit 0
+fi
 
+echo ""
 echo "Kaldırılıyor..."
 
 # Servis durdur
-launchctl bootout gui/$(id -u)/net.consolaktif.spoofdpi 2>/dev/null || true
+launchctl bootout gui/$(id -u)/com.splitwire.spoofdpi 2>/dev/null || true
 pkill -x spoofdpi 2>/dev/null || true
 
 # Dosyaları sil
-rm -f "$HOME/Library/LaunchAgents/net.consolaktif.spoofdpi.plist"
-rm -rf "$HOME/Library/Application Support/Consolaktif-Discord"
+rm -f "$HOME/Library/LaunchAgents/com.splitwire.spoofdpi.plist"
+rm -rf "$HOME/Library/Application Support/SplitWire"
 rm -rf "$HOME/Library/Logs/SplitWire"
 rm -rf "/Applications/SplitWire Discord.app"
 
-echo "${GRN}✓${RST} SplitWire kaldırıldı"
+# Eski dosyalar (varsa)
+launchctl bootout gui/$(id -u)/net.consolaktif.spoofdpi 2>/dev/null || true
+launchctl bootout gui/$(id -u)/net.consolaktif.discord.spoofdpi 2>/dev/null || true
+rm -f "$HOME/Library/LaunchAgents/net.consolaktif.spoofdpi.plist"
+rm -f "$HOME/Library/LaunchAgents/net.consolaktif.discord.spoofdpi.plist"
+rm -rf "$HOME/Library/Application Support/Consolaktif-Discord"
+rm -rf "$HOME/Library/Logs/ConsolAktifSplitWireLog"
+
+echo "✓ SplitWire kaldırıldı"
 
 # spoofdpi
 if command -v brew &>/dev/null && brew list spoofdpi &>/dev/null; then
-    read -p "spoofdpi'yi de kaldır? (y/N): " s
-    [[ "$s" =~ ^[Yy]$ ]] && brew uninstall spoofdpi && echo "${GRN}✓${RST} spoofdpi kaldırıldı"
+    echo ""
+    read -p "spoofdpi'yi de kaldırmak ister misiniz? (y/N): " s
+    if [[ "$s" =~ ^[Yy]$ ]]; then
+        brew uninstall spoofdpi
+        echo "✓ spoofdpi kaldırıldı"
+    fi
 fi
 
-echo
-line
-echo "${GRN}Tamamlandı.${RST} Discord normal şekilde kullanılabilir."
-echo
+echo ""
+echo "Tamamlandı. Discord normal şekilde kullanılabilir."
+echo ""
