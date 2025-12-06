@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Renk tanımları
-GRN=$(tput setaf 2); YLW=$(tput setaf 3); RED=$(tput setaf 1); RST=$(tput sgr0)
+GRN=$(tput setaf 2 2>/dev/null || echo ""); YLW=$(tput setaf 3 2>/dev/null || echo ""); RED=$(tput setaf 1 2>/dev/null || echo ""); RST=$(tput sgr0 2>/dev/null || echo "")
 
 # Başlık Fonksiyonu
 hr() { printf "\n${YLW}────────────────────────────────────────────────────────${RST}\n"; }
@@ -14,6 +14,8 @@ title
 
 # 1. Kullanıcı Onayı
 echo "Bu işlem SplitWire'ı ve tüm yapılandırma dosyalarını silecektir."
+echo "Discord orijinal haline geri döndürülecektir."
+echo
 read -p "Devam etmek istiyor musunuz? (y/N): " confirm
 if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
     echo "İşlem iptal edildi."
@@ -28,15 +30,12 @@ LOG_DIR="$HOME/Library/Logs/ConsolAktifSplitWireLog"
 PLIST_SPOOFDPI="net.consolaktif.discord.spoofdpi"
 PLIST_LAUNCHER="net.consolaktif.discord.launcher"
 
-# 2. Servisleri Durdurma (macOS 15 Uyumlu)
-section_start="Servisler durduruluyor..."
-info "$section_start"
+# 2. Servisleri Durdurma
+info "Servisler durduruluyor..."
 
-# Yeni yöntem (bootout) - Hata verirse yoksay
 launchctl bootout gui/$(id -u)/$PLIST_SPOOFDPI 2>/dev/null || true
 launchctl bootout gui/$(id -u)/$PLIST_LAUNCHER 2>/dev/null || true
 
-# Eski yöntem (unload) - Garanti olsun diye
 if [ -f "$LAUNCH_AGENTS_DIR/$PLIST_SPOOFDPI.plist" ]; then
     launchctl unload -w "$LAUNCH_AGENTS_DIR/$PLIST_SPOOFDPI.plist" 2>/dev/null || true
 fi
@@ -44,18 +43,48 @@ if [ -f "$LAUNCH_AGENTS_DIR/$PLIST_LAUNCHER.plist" ]; then
     launchctl unload -w "$LAUNCH_AGENTS_DIR/$PLIST_LAUNCHER.plist" 2>/dev/null || true
 fi
 
-# Discord'u kapat (Proxy bağlantısını kesmek için)
+# spoofdpi ve Discord'u kapat
+pkill -x spoofdpi 2>/dev/null || true
 pkill -x Discord 2>/dev/null || true
-success "Servisler durduruldu ve Discord kapatıldı."
+success "Servisler durduruldu."
 
-# 3. Dosyaları Temizleme
+# 3. Discord'u Orijinal Haline Geri Döndürme
+info "Discord orijinal haline döndürülüyor..."
+
+DISCORD_APP="/Applications/Discord.app"
+DISCORD_ORIGINAL="/Applications/Discord_Original.app"
+
+# Eğer wrapper varsa sil ve orijinali geri getir
+if [ -d "$DISCORD_ORIGINAL" ]; then
+    # Wrapper'ı kontrol et
+    if [ -f "$DISCORD_APP/Contents/Resources/splitwire_marker" ]; then
+        rm -rf "$DISCORD_APP"
+        success "SplitWire wrapper silindi."
+    fi
+    
+    # Orijinali geri taşı
+    mv "$DISCORD_ORIGINAL" "$DISCORD_APP"
+    success "Orijinal Discord geri yüklendi."
+else
+    # Eski yöntem: Binary değiştirilmişse geri al
+    DISCORD_BIN="$DISCORD_APP/Contents/MacOS/Discord"
+    ORIGINAL_BIN="$DISCORD_APP/Contents/MacOS/Discord_Original"
+    
+    if [ -f "$ORIGINAL_BIN" ]; then
+        rm -f "$DISCORD_BIN"
+        mv "$ORIGINAL_BIN" "$DISCORD_BIN"
+        success "Discord binary geri yüklendi."
+    fi
+fi
+
+# 4. Dosyaları Temizleme
 info "Dosyalar siliniyor..."
 
 # Plist dosyaları
 rm -f "$LAUNCH_AGENTS_DIR/$PLIST_SPOOFDPI.plist"
 rm -f "$LAUNCH_AGENTS_DIR/$PLIST_LAUNCHER.plist"
 
-# Uygulama Destek Klasörü (Scriptler ve ayarlar)
+# Uygulama Destek Klasörü
 rm -rf "$APP_SUPPORT_DIR"
 
 # Log Klasörü
@@ -67,7 +96,7 @@ rm -f "$HOME/Desktop/SplitWire Loglar"
 
 success "Tüm uygulama dosyaları ve kısayollar temizlendi."
 
-# 4. SpoofDPI Kaldırma (Opsiyonel)
+# 5. SpoofDPI Kaldırma (Opsiyonel)
 echo
 info "SplitWire, 'spoofdpi' aracını kullanır."
 if command -v brew >/dev/null 2>&1; then
@@ -82,7 +111,7 @@ if command -v brew >/dev/null 2>&1; then
     fi
 fi
 
-# 5. Bitiş
+# 6. Bitiş
 echo
 hr
 echo "${GRN}SplitWire başarıyla bilgisayarınızdan kaldırıldı.${RST}"

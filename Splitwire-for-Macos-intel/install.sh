@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
 # =============================================================================
-# SplitWire Kurulum Scripti - macOS 26 (Tahoe) Uyumlu - Intel Versiyonu
+# SplitWire Kurulum Scripti - Tüm macOS Sürümleri İçin (Intel)
 # =============================================================================
 # Bu script Discord'u spoofdpi proxy ile çalışacak şekilde yapılandırır.
 # Discord herhangi bir yerden (Dock, Spotlight, Finder) açılsa bile
 # proxy üzerinden çalışır. spoofdpi arka planda sürekli çalışır ve
 # sorun olursa otomatik yeniden başlatılır.
+#
+# NOT: Bu yöntem Discord binary'sini DEĞİŞTİRMEZ. Bunun yerine:
+#   1. Orijinal Discord.app -> Discord_Original.app olarak taşınır
+#   2. Yerine bir wrapper uygulama konur
+#   3. Bu uygulama Discord'u proxy ile başlatır
 # =============================================================================
 set -euo pipefail
 
@@ -15,7 +20,7 @@ checkmark() { echo "${GRN}✔${RST} $*"; }
 warning() { echo "${YLW}⚠${RST} $*"; }
 error() { echo "${RED}✖${RST} $*"; }
 hr() { printf "\n${YLW}────────────────────────────────────────────────────────${RST}\n"; }
-title() { hr; echo "${GRN}SplitWire • macOS 26 Uyumlu Kurulum (Intel)${RST}"; hr; }
+title() { hr; echo "${GRN}SplitWire • Entegrasyon Kurulumu (Intel)${RST}"; hr; }
 section() { printf "\n${YLW}▶${RST} %s\n" "$*"; }
 
 # ----------------------------------------------------------------------
@@ -25,7 +30,7 @@ set_icon() {
     local icon_path="$1"
     local target_file="$2"
     
-    if [ ! -f "$icon_path" ] || [ ! -f "$target_file" ]; then return 0; fi
+    if [ ! -f "$icon_path" ] || [ ! -e "$target_file" ]; then return 0; fi
 
     cat <<'EOF' > /tmp/seticon.swift
 import Cocoa
@@ -41,7 +46,7 @@ if let image = NSImage(contentsOfFile: iconPath) {
 EOF
     /usr/bin/swift /tmp/seticon.swift "$icon_path" "$target_file" >/dev/null 2>&1 || true
     rm -f /tmp/seticon.swift
-    touch "$target_file"
+    touch "$target_file" 2>/dev/null || true
 }
 # ----------------------------------------------------------------------
 
@@ -61,8 +66,18 @@ fi
 
 HOMEBREW_PATH="/usr/local"
 
-# 2. Xcode CLT
-section "Xcode Komut Satırı Araçları"
+# 2. Klasör Yapıları
+APP_SUPPORT_DIR="$HOME/Library/Application Support/Consolaktif-Discord"
+LAUNCH_AGENTS_DIR="$HOME/Library/LaunchAgents"
+LOG_DIR="$HOME/Library/Logs/ConsolAktifSplitWireLog"
+mkdir -p "$APP_SUPPORT_DIR" "$LAUNCH_AGENTS_DIR" "$LOG_DIR"
+
+# ----------------------------------------------------------------------
+# BAĞIMLILIK KONTROLLERİ
+# ----------------------------------------------------------------------
+section "Bağımlılıklar kontrol ediliyor..."
+
+# Xcode CLT
 if ! xcode-select -p >/dev/null 2>&1; then
     warning "Xcode CLT kuruluyor..."
     xcode-select --install || true
@@ -71,8 +86,7 @@ if ! xcode-select -p >/dev/null 2>&1; then
 fi
 checkmark "Xcode CLT kontrol edildi"
 
-# 3. Homebrew (Intel: /usr/local)
-section "Homebrew Hazırlığı"
+# Homebrew (Intel: /usr/local)
 if ! command -v brew >/dev/null 2>&1; then
     if [ -x "$HOMEBREW_PATH/bin/brew" ]; then
         eval "$($HOMEBREW_PATH/bin/brew shellenv)"
@@ -84,8 +98,7 @@ if ! command -v brew >/dev/null 2>&1; then
 fi
 checkmark "Homebrew hazır"
 
-# 4. SpoofDPI
-section "spoofdpi Kurulumu"
+# SpoofDPI
 if ! brew list spoofdpi &>/dev/null; then
     brew install spoofdpi
 fi
@@ -96,25 +109,18 @@ if [ ! -x "$SPOOFDPI_BIN" ]; then
 fi
 checkmark "spoofdpi hazır ($SPOOFDPI_BIN)"
 
-# 5. Discord Kontrolü
-section "Discord Kontrolü"
-if [[ ! -d "/Applications/Discord.app" ]]; then
+# Discord Kontrolü
+if [[ ! -d "/Applications/Discord.app" ]] && [[ ! -d "/Applications/Discord_Original.app" ]]; then
     error "Discord uygulaması bulunamadı."
     echo "Lütfen önce 'install-discord.sh' komutunu çalıştırın."
     exit 1
 fi
 checkmark "Discord bulundu"
 
-# Klasörleri Hazırla
-APP_SUPPORT_DIR="$HOME/Library/Application Support/Consolaktif-Discord"
-LAUNCH_AGENTS_DIR="$HOME/Library/LaunchAgents"
-LOG_DIR="$HOME/Library/Logs/ConsolAktifSplitWireLog"
-mkdir -p "$APP_SUPPORT_DIR" "$LAUNCH_AGENTS_DIR" "$LOG_DIR"
-
 # ----------------------------------------------------------------------
 # MEVCUT SERVİSLERİ TEMİZLE
 # ----------------------------------------------------------------------
-section "Eski Servisler Temizleniyor"
+section "Eski servisler temizleniyor..."
 launchctl bootout gui/$(id -u)/net.consolaktif.discord.spoofdpi 2>/dev/null || true
 launchctl bootout gui/$(id -u)/net.consolaktif.discord.launcher 2>/dev/null || true
 launchctl unload ~/Library/LaunchAgents/net.consolaktif.discord.spoofdpi.plist 2>/dev/null || true
@@ -169,7 +175,6 @@ if [ -f "$SCRIPT_DIR/scripts/logs.sh" ]; then
     cp "$SCRIPT_DIR/scripts/logs.sh" "$APP_SUPPORT_DIR/"
 fi
 
-# İzinleri Ver
 chmod +x "$APP_SUPPORT_DIR/"*.sh 2>/dev/null || true
 chmod +x "$APP_SUPPORT_DIR/"*.command 2>/dev/null || true
 xattr -d com.apple.quarantine "$APP_SUPPORT_DIR/"* 2>/dev/null || true
@@ -204,20 +209,67 @@ fi
 # ----------------------------------------------------------------------
 # DISCORD WRAPPER ENTEGRASYONU
 # ----------------------------------------------------------------------
-section "Discord Uygulaması Modifiye Ediliyor"
+section "Discord Uygulaması Yapılandırılıyor"
 
 DISCORD_APP="/Applications/Discord.app"
-DISCORD_BIN="$DISCORD_APP/Contents/MacOS/Discord"
-ORIGINAL_BIN="$DISCORD_APP/Contents/MacOS/Discord_Original"
+DISCORD_ORIGINAL="/Applications/Discord_Original.app"
 
-echo "${YLW}Lütfen şifrenizi girin (Discord dosyasını güncellemek ve imzalamak için):${RST}"
-sudo -v
+# Eğer orijinal Discord varsa ve wrapper yoksa, taşı
+if [ -d "$DISCORD_APP" ] && [ ! -d "$DISCORD_ORIGINAL" ]; then
+    if [ -f "$DISCORD_APP/Contents/MacOS/Discord" ] && [ ! -f "$DISCORD_APP/Contents/Resources/splitwire_marker" ]; then
+        echo "  -> Orijinal Discord yedekleniyor..."
+        mv "$DISCORD_APP" "$DISCORD_ORIGINAL"
+    fi
+fi
 
-# Wrapper Script Oluştur - macOS 26 Uyumlu
-cat <<'WRAPPER_EOF' > /tmp/Discord_Wrapper
+# Wrapper Uygulaması Oluştur
+echo "  -> Wrapper uygulama oluşturuluyor..."
+
+WRAPPER_APP="$DISCORD_APP"
+WRAPPER_CONTENTS="$WRAPPER_APP/Contents"
+WRAPPER_MACOS="$WRAPPER_CONTENTS/MacOS"
+WRAPPER_RESOURCES="$WRAPPER_CONTENTS/Resources"
+
+rm -rf "$WRAPPER_APP" 2>/dev/null || true
+mkdir -p "$WRAPPER_MACOS" "$WRAPPER_RESOURCES"
+
+# Info.plist oluştur
+cat > "$WRAPPER_CONTENTS/Info.plist" << 'PLIST_EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key>
+    <string>Discord</string>
+    <key>CFBundleIconFile</key>
+    <string>electron</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.hnc.Discord</string>
+    <key>CFBundleName</key>
+    <string>Discord</string>
+    <key>CFBundleDisplayName</key>
+    <string>Discord</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>10.13</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>LSUIElement</key>
+    <false/>
+</dict>
+</plist>
+PLIST_EOF
+
+# Başlatıcı script oluştur
+cat > "$WRAPPER_MACOS/Discord" << 'LAUNCHER_EOF'
 #!/bin/bash
 # =============================================================================
-# SplitWire Discord Başlatıcı - macOS 26 Uyumlu (Intel)
+# SplitWire Discord Başlatıcı (Intel)
 # =============================================================================
 
 # Update Döngüsü Temizliği
@@ -237,14 +289,10 @@ export ALL_PROXY="http://127.0.0.1:8080"
 # PATH ayarı (Intel: /usr/local öncelikli)
 export PATH="/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
 
-# Bu script'in bulunduğu dizin
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
 # spoofdpi çalışmıyorsa LaunchAgent'ı tetikle
 if ! pgrep -x "spoofdpi" > /dev/null 2>&1; then
     launchctl kickstart -k gui/$(id -u)/net.consolaktif.discord.spoofdpi 2>/dev/null || true
     
-    # Proxy hazır olana kadar bekle (maksimum 10 saniye)
     WAIT_COUNT=0
     while ! nc -z 127.0.0.1 8080 2>/dev/null; do
         sleep 0.5
@@ -256,37 +304,42 @@ if ! pgrep -x "spoofdpi" > /dev/null 2>&1; then
 fi
 
 # Orijinal Discord'u proxy parametresiyle başlat
-exec "$DIR/Discord_Original" --proxy-server="http://127.0.0.1:8080" --ignore-certificate-errors "$@"
-WRAPPER_EOF
+ORIGINAL_APP="/Applications/Discord_Original.app"
+if [ -d "$ORIGINAL_APP" ]; then
+    exec "$ORIGINAL_APP/Contents/MacOS/Discord" --proxy-server="http://127.0.0.1:8080" "$@"
+else
+    osascript -e 'display alert "Hata" message "Discord_Original.app bulunamadı. Lütfen SplitWire kurulumunu tekrar çalıştırın."'
+    exit 1
+fi
+LAUNCHER_EOF
 
-# Dosya Değişimi ve İmzalama
-sudo bash -c "
-    if [ ! -f '$ORIGINAL_BIN' ]; then
-        echo '  -> Orijinal dosya yedekleniyor...'
-        mv '$DISCORD_BIN' '$ORIGINAL_BIN'
+chmod +x "$WRAPPER_MACOS/Discord"
+
+# İkonu orijinalden kopyala
+if [ -d "$DISCORD_ORIGINAL" ]; then
+    ORIGINAL_ICON="$DISCORD_ORIGINAL/Contents/Resources/electron.icns"
+    if [ -f "$ORIGINAL_ICON" ]; then
+        cp "$ORIGINAL_ICON" "$WRAPPER_RESOURCES/"
     fi
-    
-    echo '  -> Wrapper script yerleştiriliyor...'
-    cp /tmp/Discord_Wrapper '$DISCORD_BIN'
-    chmod +x '$DISCORD_BIN'
-    
-    echo '  -> Uygulama yeniden imzalanıyor (Ad-hoc)...'
-    codesign --force --deep --sign - --options=runtime '$DISCORD_APP' 2>/dev/null || codesign --force --deep --sign - '$DISCORD_APP'
-"
-rm /tmp/Discord_Wrapper
+fi
 
-checkmark "Discord başarıyla yamalandı ve imzalandı."
+# SplitWire marker dosyası
+touch "$WRAPPER_RESOURCES/splitwire_marker"
+
+# quarantine temizle
+xattr -cr "$WRAPPER_APP" 2>/dev/null || true
+
+checkmark "Discord wrapper uygulaması oluşturuldu."
 
 # ----------------------------------------------------------------------
 # İKONLAR VE KISAYOLLAR
 # ----------------------------------------------------------------------
 section "İkonlar ve Kısayollar"
 
-DISCORD_ICON="/Applications/Discord.app/Contents/Resources/electron.icns"
+DISCORD_ICON="$DISCORD_ORIGINAL/Contents/Resources/electron.icns"
 CONSOLE_ICON="/System/Applications/Utilities/Console.app/Contents/Resources/AppIcon.icns"
 if [ ! -f "$CONSOLE_ICON" ]; then CONSOLE_ICON="/Applications/Utilities/Console.app/Contents/Resources/AppIcon.icns"; fi
 
-# Ana dosyalara ikon bas
 if [ -f "$DISCORD_ICON" ]; then 
     echo "  -> Kontrol Paneli ikonu işleniyor..."
     set_icon "$DISCORD_ICON" "$APP_SUPPORT_DIR/SplitWire Kontrol.command"
@@ -324,6 +377,10 @@ echo "   1. ${GRN}spoofdpi${RST} arka planda sürekli çalışıyor (LaunchAgent
 echo "   2. Discord her açıldığında (Dock/Spotlight/Finder) proxy kullanıyor"
 echo "   3. Sorun olursa spoofdpi otomatik yeniden başlatılıyor"
 echo "   4. ${YLW}Diğer uygulamalar etkilenmiyor${RST} - yalnızca Discord proxy kullanıyor"
+echo
+echo "📂 ${YLW}DOSYA YAPISI:${RST}"
+echo "   • /Applications/Discord.app       -> SplitWire Wrapper (açılacak uygulama)"
+echo "   • /Applications/Discord_Original.app -> Gerçek Discord (dokunmayın)"
 echo
 echo "🔧 ${YLW}KONTROL:${RST}"
 echo "   • Masaüstünden 'SplitWire Kontrol' ile servisi yönetebilirsiniz"

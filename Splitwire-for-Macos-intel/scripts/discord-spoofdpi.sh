@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 # =============================================================================
-# SplitWire - SpoofDPI Servis Başlatıcı (macOS 26 Tahoe Uyumlu - Intel)
+# SplitWire - SpoofDPI Servis Başlatıcı (Intel)
 # =============================================================================
 set -euo pipefail
 
 # Sinyal yakalama - graceful shutdown
 cleanup() {
-    echo "[$(date)] Sinyal alındı, kapatılıyor..."
     pkill -x spoofdpi 2>/dev/null || true
     exit 0
 }
@@ -42,33 +41,15 @@ mkdir -p "$LOG_DIR"
 LISTEN_PORT="${SPOOFDPI_PORT:-8080}"
 LISTEN_ADDR="127.0.0.1"
 
-# Eski süreçleri temizle (port çakışmasını önle)
+# Eski süreçleri temizle
 pkill -x spoofdpi 2>/dev/null || true
 sleep 1
-
-# Port kullanılabilirliğini kontrol et
-check_port() {
-    ! nc -z "$LISTEN_ADDR" "$LISTEN_PORT" 2>/dev/null
-}
-
-# Eğer port kullanılıyorsa alternatif port bul
-if ! check_port; then
-    echo "[$(date)] Port $LISTEN_PORT kullanımda, alternatif aranıyor..."
-    for alt_port in $(seq 8081 8099); do
-        LISTEN_PORT=$alt_port
-        if check_port; then
-            echo "[$(date)] Alternatif port bulundu: $LISTEN_PORT"
-            break
-        fi
-    done
-fi
 
 echo "[$(date)] SpoofDPI Başlatılıyor..."
 echo "  -> Binary: $SPOOF_BIN"
 echo "  -> Adres: $LISTEN_ADDR:$LISTEN_PORT"
-echo "  -> DoH: Aktif"
 
-# spoofdpi'yi foreground'da çalıştır (LaunchAgent için gerekli)
+# spoofdpi'yi foreground'da çalıştır
 exec "$SPOOF_BIN" \
     --listen-addr "$LISTEN_ADDR" \
     --listen-port "$LISTEN_PORT" \

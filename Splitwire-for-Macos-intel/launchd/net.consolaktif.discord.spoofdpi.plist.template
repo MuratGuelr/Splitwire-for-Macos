@@ -14,27 +14,13 @@
     <key>RunAtLoad</key>
     <true/>
     
-    <!-- Her durumda çalışır tut - macOS 26 için geliştirilmiş KeepAlive -->
+    <!-- Her durumda çalışır tut -->
     <key>KeepAlive</key>
-    <dict>
-        <!-- Başarısız çıkışlarda yeniden başlat -->
-        <key>SuccessfulExit</key>
-        <false/>
-        <!-- Crash durumunda yeniden başlat -->
-        <key>Crashed</key>
-        <true/>
-        <!-- Her zaman çalışır tut (bu en önemli ayar) -->
-        <key>AfterInitialDemand</key>
-        <true/>
-    </dict>
+    <true/>
     
-    <!-- Throttle ayarı - yeniden başlatma arasında minimum 3 saniye bekle -->
+    <!-- Yeniden başlatma arasında bekleme süresi -->
     <key>ThrottleInterval</key>
     <integer>3</integer>
-    
-    <!-- Çıkış timeout'u -->
-    <key>ExitTimeOut</key>
-    <integer>10</integer>
     
     <!-- Log dosyaları -->
     <key>StandardOutPath</key>
@@ -42,25 +28,11 @@
     <key>StandardErrorPath</key>
     <string>__USER_HOME__/Library/Logs/ConsolAktifSplitWireLog/net.consolaktif.discord.spoofdpi.err.log</string>
     
-    <!-- Ortam değişkenleri - Intel Mac için /usr/local öncelikli -->
+    <!-- Ortam değişkenleri - Intel için /usr/local öncelikli -->
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
         <string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
-        <key>HOME</key>
-        <string>__USER_HOME__</string>
     </dict>
-    
-    <!-- İşlem tipi -->
-    <key>ProcessType</key>
-    <string>Background</string>
-    
-    <!-- macOS 26 uyumu için LowPriorityIO -->
-    <key>LowPriorityIO</key>
-    <false/>
-    
-    <!-- Başlatma anında çalışma dizini -->
-    <key>WorkingDirectory</key>
-    <string>__USER_HOME__/Library/Application Support/Consolaktif-Discord</string>
 </dict>
 </plist>
